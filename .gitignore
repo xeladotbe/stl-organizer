@@ -1,0 +1,10 @@
+node_modules
+dist
+out
+.DS_Store
+.eslintcache
+*.log*
+
+# Claude Code local-only settings (not shared)
+.claude/settings.local.json
+.claude/scheduled_tasks.lock

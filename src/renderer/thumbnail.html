@@ -1,0 +1,16 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Thumbnail Renderer</title>
+    <!-- Hidden, UI-less page: renders one model to an offscreen canvas per job and posts back a PNG. -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; img-src 'self' data:; connect-src 'self' stl-file:"
+    />
+  </head>
+
+  <body>
+    <script type="module" src="/src/thumbnail-entry.ts"></script>
+  </body>
+</html>

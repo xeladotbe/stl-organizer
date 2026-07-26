@@ -43,18 +43,17 @@ export function FileList(): React.JSX.Element {
     }
 
     const textMatchersByToken = textTokens.map((token) => createTextMatcher(token))
-    const tagIdSetsByToken = tagTokens.map(
-      (token) =>
-        new Set(tags.filter((tag) => tag.name.toLowerCase().includes(token)).map((tag) => tag.id))
-    )
-    const categoryIdSetsByToken = categoryTokens.map(
-      (token) =>
-        new Set(
-          categories
-            .filter((category) => category.name.toLowerCase().includes(token))
-            .map((category) => category.id)
-        )
-    )
+    const tagIdSetsByToken = tagTokens.map((token) => {
+      const matches = createTextMatcher(token)
+      return new Set(tags.filter((tag) => matches(tag.name.toLowerCase())).map((tag) => tag.id))
+    })
+    const categoryIdSetsByToken = categoryTokens.map((token) => {
+      const matches = createTextMatcher(token)
+      return new Set(
+        categories.filter((category) => matches(category.name.toLowerCase())).map((category) => category.id)
+      )
+    })
+    const typeMatchersByToken = typeTokens.map((token) => createTextMatcher(token))
 
     return files.filter((file) => {
       const group = file.group_id != null ? groupById.get(file.group_id) : undefined
@@ -85,11 +84,9 @@ export function FileList(): React.JSX.Element {
         if (!matchesTags) return false
       }
 
-      if (typeTokens.length > 0) {
-        const isGrouped = group != null
-        const matchesType = typeTokens.every((token) =>
-          token === 'virtual' ? isGrouped : file.ext.toLowerCase() === token
-        )
+      if (typeMatchersByToken.length > 0) {
+        const effectiveType = group != null ? 'virtual' : file.ext.toLowerCase()
+        const matchesType = typeMatchersByToken.every((matches) => matches(effectiveType))
         if (!matchesType) return false
       }
 

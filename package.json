@@ -29,6 +29,7 @@
     "@tanstack/react-virtual": "^3.14.8",
     "better-sqlite3": "^13.0.1",
     "chokidar": "^5.0.0",
+    "radix-ui": "^1.6.7",
     "three": "^0.185.1",
     "zustand": "^5.0.14"
   },

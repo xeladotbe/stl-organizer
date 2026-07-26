@@ -3,7 +3,9 @@
     "allow": [
       "Bash(unset ELECTRON_RUN_AS_NODE)",
       "Bash(npm run *)",
-      "Bash(git add *)"
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)"
     ]
   }
 }

@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import { useLibraryStore } from '../store/useLibraryStore'
 import { ModelPreview } from './ModelPreview'
+import { ConfirmDialog } from './ConfirmDialog'
+import { SelectField } from './SelectField'
 import { formatSize } from '../lib/format'
-import type { CategoryRow, TagRow } from '@shared/types'
+import type { CategoryRow, FileRow, TagRow } from '@shared/types'
 
 /**
  * `key`-ed by the caller on the underlying id + value, so an external rename (or switching to a
@@ -90,20 +92,15 @@ function CategoryPicker({
 
   return (
     <div>
-      <select
-        value={value ?? ''}
-        onChange={(event) =>
-          onChange(event.target.value === '' ? null : Number(event.target.value))
-        }
-        className="w-full rounded border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-sm text-neutral-100 focus:border-neutral-500 focus:outline-none"
-      >
-        <option value="">No category</option>
-        {categories.map((category) => (
-          <option key={category.id} value={category.id}>
-            {category.name}
-          </option>
-        ))}
-      </select>
+      <SelectField
+        value={value != null ? String(value) : null}
+        placeholder="No category"
+        options={categories.map((category) => ({
+          value: String(category.id),
+          label: category.name
+        }))}
+        onChange={(next) => onChange(next == null ? null : Number(next))}
+      />
       <div className="mt-1 flex gap-1">
         <input
           value={newName}
@@ -203,10 +200,7 @@ export function DetailPane(): React.JSX.Element | null {
   const createTag = useLibraryStore((state) => state.createTag)
   const createCategory = useLibraryStore((state) => state.createCategory)
 
-  const handleTrash = (file: { id: number; filename: string; path: string }): void => {
-    if (!confirm(`Move "${file.filename}" to the Recycle Bin?\n${file.path}`)) return
-    void moveToTrash(file.id)
-  }
+  const [trashTarget, setTrashTarget] = useState<FileRow | null>(null)
 
   if (!selection) return null
 
@@ -216,81 +210,96 @@ export function DetailPane(): React.JSX.Element | null {
     const members = files.filter((f) => f.group_id === group.id)
 
     return (
-      <aside className="flex w-80 shrink-0 flex-col overflow-y-auto border-l border-neutral-800 bg-neutral-900 p-3">
-        <div className="mb-2 flex items-center justify-between">
-          <span className="text-xs font-semibold uppercase text-neutral-500">Model</span>
-          <button
-            onClick={() => selectFile(null)}
-            aria-label="Close preview"
-            className="rounded px-1.5 py-0.5 text-neutral-500 hover:bg-neutral-800 hover:text-neutral-200"
-          >
-            ✕
-          </button>
-        </div>
+      <>
+        <aside className="flex w-80 shrink-0 flex-col overflow-y-auto border-l border-neutral-800 bg-neutral-900 p-3">
+          <div className="mb-2 flex items-center justify-between">
+            <span className="text-xs font-semibold uppercase text-neutral-500">Model</span>
+            <button
+              onClick={() => selectFile(null)}
+              aria-label="Close preview"
+              className="rounded px-1.5 py-0.5 text-neutral-500 hover:bg-neutral-800 hover:text-neutral-200"
+            >
+              ✕
+            </button>
+          </div>
 
-        <InlineRename
-          key={`${group.id}:${group.name}`}
-          value={group.name}
-          onCommit={(name) => void renameGroup(group.id, name)}
-        />
-        <div className="mt-1 text-xs text-neutral-500">
-          {members.length} file{members.length === 1 ? '' : 's'}
-        </div>
-
-        <div className="mt-4">
-          <label className="mb-1 block text-xs font-semibold uppercase text-neutral-500">
-            Category
-          </label>
-          <CategoryPicker
-            categories={categories}
-            value={group.category_id}
-            onChange={(id) => void setGroupCategory(group.id, id)}
-            onCreate={createCategory}
+          <InlineRename
+            key={`${group.id}:${group.name}`}
+            value={group.name}
+            onCommit={(name) => void renameGroup(group.id, name)}
           />
-        </div>
+          <div className="mt-1 text-xs text-neutral-500">
+            {members.length} file{members.length === 1 ? '' : 's'}
+          </div>
 
-        <div className="mt-4">
-          <label className="mb-1 block text-xs font-semibold uppercase text-neutral-500">
-            Files in this model
-          </label>
-          <ul className="space-y-1">
-            {members.map((file) => (
-              <li key={file.id} className="flex items-center justify-between gap-2 text-sm">
-                <button
-                  onClick={() => selectFile(file.id)}
-                  className="min-w-0 flex-1 truncate text-left text-neutral-300 hover:text-neutral-100"
-                  title={file.filename}
-                >
-                  {file.filename}
-                </button>
-                <button
-                  onClick={() => handleTrash(file)}
-                  aria-label="Move to Recycle Bin"
-                  title="Move to Recycle Bin"
-                  className="shrink-0 text-neutral-500 hover:text-red-400"
-                >
-                  🗑
-                </button>
-                <button
-                  onClick={() => void removeFileFromGroup(file.id)}
-                  aria-label="Remove from group"
-                  title="Remove from group"
-                  className="shrink-0 text-neutral-500 hover:text-neutral-200"
-                >
-                  ✕
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
+          <div className="mt-4">
+            <label className="mb-1 block text-xs font-semibold uppercase text-neutral-500">
+              Category
+            </label>
+            <CategoryPicker
+              categories={categories}
+              value={group.category_id}
+              onChange={(id) => void setGroupCategory(group.id, id)}
+              onCreate={createCategory}
+            />
+          </div>
 
-        <button
-          onClick={() => void deleteGroup(group.id)}
-          className="mt-4 self-start rounded px-2 py-1 text-xs text-red-400 hover:bg-red-950"
-        >
-          Dissolve group
-        </button>
-      </aside>
+          <div className="mt-4">
+            <label className="mb-1 block text-xs font-semibold uppercase text-neutral-500">
+              Files in this model
+            </label>
+            <ul className="space-y-1">
+              {members.map((file) => (
+                <li key={file.id} className="flex items-center justify-between gap-2 text-sm">
+                  <button
+                    onClick={() => selectFile(file.id)}
+                    className="min-w-0 flex-1 truncate text-left text-neutral-300 hover:text-neutral-100"
+                    title={file.filename}
+                  >
+                    {file.filename}
+                  </button>
+                  <button
+                    onClick={() => setTrashTarget(file)}
+                    aria-label="Move to Recycle Bin"
+                    title="Move to Recycle Bin"
+                    className="shrink-0 text-neutral-500 hover:text-red-400"
+                  >
+                    🗑
+                  </button>
+                  <button
+                    onClick={() => void removeFileFromGroup(file.id)}
+                    aria-label="Remove from group"
+                    title="Remove from group"
+                    className="shrink-0 text-neutral-500 hover:text-neutral-200"
+                  >
+                    ✕
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <button
+            onClick={() => void deleteGroup(group.id)}
+            className="mt-4 self-start rounded px-2 py-1 text-xs text-red-400 hover:bg-red-950"
+          >
+            Dissolve group
+          </button>
+        </aside>
+        {trashTarget && (
+          <ConfirmDialog
+            title={`Move "${trashTarget.filename}" to the Recycle Bin?`}
+            description={trashTarget.path}
+            confirmLabel="Move to Recycle Bin"
+            danger
+            onCancel={() => setTrashTarget(null)}
+            onConfirm={() => {
+              void moveToTrash(trashTarget.id)
+              setTrashTarget(null)
+            }}
+          />
+        )}
+      </>
     )
   }
 
@@ -362,21 +371,14 @@ export function DetailPane(): React.JSX.Element | null {
             No models yet — select 2+ files in the list to create one.
           </span>
         ) : (
-          <select
-            value=""
-            onChange={(event) => {
-              if (!event.target.value) return
-              void addFilesToGroup(Number(event.target.value), [file.id])
+          <SelectField
+            value={null}
+            placeholder="Add to existing model…"
+            options={groups.map((group) => ({ value: String(group.id), label: group.name }))}
+            onChange={(next) => {
+              if (next) void addFilesToGroup(Number(next), [file.id])
             }}
-            className="w-full rounded border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-sm text-neutral-100 focus:border-neutral-500 focus:outline-none"
-          >
-            <option value="">Add to existing model…</option>
-            {groups.map((group) => (
-              <option key={group.id} value={group.id}>
-                {group.name}
-              </option>
-            ))}
-          </select>
+          />
         )}
       </div>
 

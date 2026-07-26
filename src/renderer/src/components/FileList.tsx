@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { ToggleGroup } from 'radix-ui'
 import { useLibraryStore } from '../store/useLibraryStore'
 import { FileTable } from './FileTable'
 import { FileGrid } from './FileGrid'
@@ -112,28 +113,25 @@ export function FileList(): React.JSX.Element {
             placeholder="Search files… (tag:name, category:name)"
             className="w-full max-w-sm rounded border border-neutral-700 bg-neutral-900 px-3 py-1.5 text-sm text-neutral-100 placeholder:text-neutral-500 focus:border-neutral-500 focus:outline-none"
           />
-          <div className="flex shrink-0 rounded border border-neutral-700 text-xs">
-            <button
-              onClick={() => setDisplayMode('list')}
-              className={`px-2 py-1.5 ${
-                displayMode === 'list'
-                  ? 'bg-neutral-800 text-neutral-100'
-                  : 'text-neutral-500 hover:text-neutral-300'
-              }`}
+          <ToggleGroup.Root
+            type="single"
+            value={displayMode}
+            onValueChange={(next) => next && setDisplayMode(next as DisplayMode)}
+            className="flex shrink-0 rounded border border-neutral-700 text-xs"
+          >
+            <ToggleGroup.Item
+              value="list"
+              className="px-2 py-1.5 text-neutral-500 hover:text-neutral-300 data-[state=on]:bg-neutral-800 data-[state=on]:text-neutral-100"
             >
               List
-            </button>
-            <button
-              onClick={() => setDisplayMode('grid')}
-              className={`border-l border-neutral-700 px-2 py-1.5 ${
-                displayMode === 'grid'
-                  ? 'bg-neutral-800 text-neutral-100'
-                  : 'text-neutral-500 hover:text-neutral-300'
-              }`}
+            </ToggleGroup.Item>
+            <ToggleGroup.Item
+              value="grid"
+              className="border-l border-neutral-700 px-2 py-1.5 text-neutral-500 hover:text-neutral-300 data-[state=on]:bg-neutral-800 data-[state=on]:text-neutral-100"
             >
               Grid
-            </button>
-          </div>
+            </ToggleGroup.Item>
+          </ToggleGroup.Root>
         </div>
       </div>
       <div className="flex-1 overflow-hidden">

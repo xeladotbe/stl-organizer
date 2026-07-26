@@ -1,13 +1,17 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useLibraryStore } from '../store/useLibraryStore'
+import { ConfirmDialog } from './ConfirmDialog'
 import { formatSize } from '../lib/format'
 import type { FileRow } from '@shared/types'
+
+type TrashTarget = { type: 'file'; file: FileRow } | { type: 'keepFirst'; group: FileRow[] }
 
 export function DuplicatesView(): React.JSX.Element {
   const duplicates = useLibraryStore((state) => state.duplicates)
   const duplicatesLoading = useLibraryStore((state) => state.duplicatesLoading)
   const moveToTrash = useLibraryStore((state) => state.moveToTrash)
   const selectFile = useLibraryStore((state) => state.selectFile)
+  const [trashTarget, setTrashTarget] = useState<TrashTarget | null>(null)
 
   const groups = useMemo(() => {
     const map = new Map<string, FileRow[]>()
@@ -20,24 +24,11 @@ export function DuplicatesView(): React.JSX.Element {
     return [...map.values()]
   }, [duplicates])
 
-  const handleTrash = (file: FileRow): void => {
-    if (!confirm(`Move "${file.filename}" to the Recycle Bin?\n${file.path}`)) return
-    void moveToTrash(file.id)
-  }
+  const handleTrash = (file: FileRow): void => setTrashTarget({ type: 'file', file })
 
-  const handleKeepFirst = async (group: FileRow[]): Promise<void> => {
-    const [, ...rest] = group
-    if (rest.length === 0) return
-    if (
-      !confirm(
-        `Move ${rest.length} duplicate(s) to the Recycle Bin, keeping "${group[0].filename}"?`
-      )
-    ) {
-      return
-    }
-    for (const file of rest) {
-      await moveToTrash(file.id)
-    }
+  const handleKeepFirst = (group: FileRow[]): void => {
+    if (group.length <= 1) return
+    setTrashTarget({ type: 'keepFirst', group })
   }
 
   return (
@@ -60,7 +51,7 @@ export function DuplicatesView(): React.JSX.Element {
                 {group.length} copies · {formatSize(group[0].size)} each
               </div>
               <button
-                onClick={() => void handleKeepFirst(group)}
+                onClick={() => handleKeepFirst(group)}
                 className="rounded bg-neutral-800 px-2 py-1 text-xs text-neutral-200 hover:bg-neutral-700"
               >
                 Keep first, trash rest
@@ -93,6 +84,28 @@ export function DuplicatesView(): React.JSX.Element {
           </div>
         ))}
       </div>
+      {trashTarget && (
+        <ConfirmDialog
+          title={
+            trashTarget.type === 'file'
+              ? `Move "${trashTarget.file.filename}" to the Recycle Bin?`
+              : `Move ${trashTarget.group.length - 1} duplicate(s) to the Recycle Bin, keeping "${trashTarget.group[0].filename}"?`
+          }
+          description={trashTarget.type === 'file' ? trashTarget.file.path : undefined}
+          confirmLabel="Move to Recycle Bin"
+          danger
+          onCancel={() => setTrashTarget(null)}
+          onConfirm={() => {
+            if (trashTarget.type === 'file') {
+              void moveToTrash(trashTarget.file.id)
+            } else {
+              const [, ...rest] = trashTarget.group
+              for (const file of rest) void moveToTrash(file.id)
+            }
+            setTrashTarget(null)
+          }}
+        />
+      )}
     </main>
   )
 }

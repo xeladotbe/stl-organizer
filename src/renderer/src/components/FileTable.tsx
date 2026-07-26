@@ -6,10 +6,12 @@ import { formatSize } from '../lib/format'
 import { modelThumbnailUrl } from '@shared/modelFileUrl'
 import { ItemMenu, type MenuItem } from './ItemMenu'
 import { GroupNameDialog } from './GroupNameDialog'
+import { ConfirmDialog } from './ConfirmDialog'
 import type { FileRow, ModelGroupRow } from '@shared/types'
 import type { DisplayItem } from '../lib/groupFiles'
 
 type MenuTarget = { type: 'file'; file: FileRow } | { type: 'group'; group: ModelGroupRow }
+type TrashTarget = { type: 'file'; file: FileRow } | { type: 'selected'; ids: number[] }
 
 interface MenuAnchor {
   target: MenuTarget
@@ -206,6 +208,7 @@ export function FileTable({ items }: { items: DisplayItem[] }): React.JSX.Elemen
   const [expandedGroups, setExpandedGroups] = useState<Set<number>>(new Set())
   const [menu, setMenu] = useState<MenuAnchor | null>(null)
   const [groupDialogFor, setGroupDialogFor] = useState<number[] | null>(null)
+  const [trashTarget, setTrashTarget] = useState<TrashTarget | null>(null)
 
   useEffect(() => {
     localStorage.setItem(WIDTHS_STORAGE_KEY, JSON.stringify(widths))
@@ -304,16 +307,8 @@ export function FileTable({ items }: { items: DisplayItem[] }): React.JSX.Elemen
     else selectFile(id)
   }
 
-  const handleTrash = (file: FileRow): void => {
-    if (!confirm(`Move "${file.filename}" to the Recycle Bin?\n${file.path}`)) return
-    void moveToTrash(file.id)
-  }
-
-  const handleTrashSelected = (ids: number[]): void => {
-    if (!confirm(`Move ${ids.length} files to the Recycle Bin?`)) return
-    for (const id of ids) void moveToTrash(id)
-    clearFileSelection()
-  }
+  const handleTrash = (file: FileRow): void => setTrashTarget({ type: 'file', file })
+  const handleTrashSelected = (ids: number[]): void => setTrashTarget({ type: 'selected', ids })
 
   const openMenuAt = (event: React.MouseEvent, target: MenuTarget): void => {
     const anchorEl = event.currentTarget as HTMLElement
@@ -370,6 +365,28 @@ export function FileTable({ items }: { items: DisplayItem[] }): React.JSX.Elemen
           onConfirm={(name) => {
             void createGroup(name, groupDialogFor)
             setGroupDialogFor(null)
+          }}
+        />
+      )}
+      {trashTarget && (
+        <ConfirmDialog
+          title={
+            trashTarget.type === 'file'
+              ? `Move "${trashTarget.file.filename}" to the Recycle Bin?`
+              : `Move ${trashTarget.ids.length} files to the Recycle Bin?`
+          }
+          description={trashTarget.type === 'file' ? trashTarget.file.path : undefined}
+          confirmLabel="Move to Recycle Bin"
+          danger
+          onCancel={() => setTrashTarget(null)}
+          onConfirm={() => {
+            if (trashTarget.type === 'file') {
+              void moveToTrash(trashTarget.file.id)
+            } else {
+              for (const id of trashTarget.ids) void moveToTrash(id)
+              clearFileSelection()
+            }
+            setTrashTarget(null)
           }}
         />
       )}

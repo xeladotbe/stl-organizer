@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
-import { useLibraryStore } from './store/useLibraryStore'
+import { Tabs } from 'radix-ui'
+import { useLibraryStore, type LibraryView } from './store/useLibraryStore'
 import { FileList } from './components/FileList'
 import { DuplicatesView } from './components/DuplicatesView'
 import { DetailPane } from './components/DetailPane'
@@ -18,30 +19,26 @@ function App(): React.JSX.Element {
 
   return (
     <div className="flex h-full bg-neutral-950 text-neutral-100">
-      <div className="flex flex-1 flex-col overflow-hidden">
+      <Tabs.Root
+        value={view}
+        onValueChange={(next) => setView(next as LibraryView)}
+        className="flex flex-1 flex-col overflow-hidden"
+      >
         <div className="flex items-center justify-between gap-1 border-b border-neutral-800 px-4 pt-2">
-          <div className="flex gap-1">
-            <button
-              onClick={() => setView('all')}
-              className={`rounded-t px-3 py-1.5 text-sm ${
-                view === 'all'
-                  ? 'bg-neutral-900 text-neutral-100'
-                  : 'text-neutral-500 hover:text-neutral-300'
-              }`}
+          <Tabs.List className="flex gap-1">
+            <Tabs.Trigger
+              value="all"
+              className="rounded-t px-3 py-1.5 text-sm text-neutral-500 hover:text-neutral-300 data-[state=active]:bg-neutral-900 data-[state=active]:text-neutral-100"
             >
               All files
-            </button>
-            <button
-              onClick={() => setView('duplicates')}
-              className={`rounded-t px-3 py-1.5 text-sm ${
-                view === 'duplicates'
-                  ? 'bg-neutral-900 text-neutral-100'
-                  : 'text-neutral-500 hover:text-neutral-300'
-              }`}
+            </Tabs.Trigger>
+            <Tabs.Trigger
+              value="duplicates"
+              className="rounded-t px-3 py-1.5 text-sm text-neutral-500 hover:text-neutral-300 data-[state=active]:bg-neutral-900 data-[state=active]:text-neutral-100"
             >
               Duplicates{duplicateGroupCount > 0 ? ` (${duplicateGroupCount})` : ''}
-            </button>
-          </div>
+            </Tabs.Trigger>
+          </Tabs.List>
           <button
             onClick={() => window.api.app.openFoldersWindow()}
             aria-label="Manage watched folders"
@@ -52,7 +49,7 @@ function App(): React.JSX.Element {
           </button>
         </div>
         {view === 'all' ? <FileList /> : <DuplicatesView />}
-      </div>
+      </Tabs.Root>
       <DetailPane />
     </div>
   )

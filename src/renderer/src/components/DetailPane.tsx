@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useLibraryStore } from '../store/useLibraryStore'
 import { ModelPreview } from './ModelPreview'
 import { ConfirmDialog } from './ConfirmDialog'
+import { ChipComboBox } from './ChipComboBox'
 import { SelectField } from './SelectField'
 import { formatSize } from '../lib/format'
 import type { CategoryRow, FileRow, TagRow } from '@shared/types'
@@ -80,43 +81,26 @@ function CategoryPicker({
   onChange: (id: number | null) => void
   onCreate: (name: string) => Promise<CategoryRow | undefined>
 }): React.JSX.Element {
-  const [newName, setNewName] = useState('')
+  const current = value != null ? categories.find((category) => category.id === value) : undefined
+  const suggestions = categories.filter((category) => category.id !== value)
 
-  const submit = async (): Promise<void> => {
-    const name = newName.trim()
-    if (!name) return
-    const created = await onCreate(name)
-    setNewName('')
-    if (created) onChange(created.id)
+  const handleCreate = (name: string): void => {
+    void (async (): Promise<void> => {
+      const created = await onCreate(name)
+      if (created) onChange(created.id)
+    })()
   }
 
   return (
-    <div>
-      <SelectField
-        value={value != null ? String(value) : null}
-        placeholder="No category"
-        options={categories.map((category) => ({
-          value: String(category.id),
-          label: category.name
-        }))}
-        onChange={(next) => onChange(next == null ? null : Number(next))}
-      />
-      <div className="mt-1 flex gap-1">
-        <input
-          value={newName}
-          onChange={(event) => setNewName(event.target.value)}
-          onKeyDown={(event) => event.key === 'Enter' && void submit()}
-          placeholder="+ New category…"
-          className="min-w-0 flex-1 rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-xs text-neutral-100 placeholder:text-neutral-600 focus:border-neutral-500 focus:outline-none"
-        />
-        <button
-          onClick={() => void submit()}
-          className="shrink-0 rounded bg-neutral-800 px-2 py-1 text-xs text-neutral-300 hover:bg-neutral-700"
-        >
-          Add
-        </button>
-      </div>
-    </div>
+    <ChipComboBox
+      chips={current ? [{ id: current.id, name: current.name }] : []}
+      suggestions={suggestions}
+      placeholder="Category…"
+      chipClassName="bg-green-900/60 text-green-300"
+      onRemove={() => onChange(null)}
+      onSelectExisting={(id) => onChange(id)}
+      onCreateNew={handleCreate}
+    />
   )
 }
 
@@ -131,50 +115,29 @@ function TagPicker({
   onToggle: (id: number) => void
   onCreate: (name: string) => Promise<TagRow | undefined>
 }): React.JSX.Element {
-  const [newName, setNewName] = useState('')
+  // Chips follow `assignedIds`' own order (how the tags were actually added to this file), not
+  // `tags`' alphabetical order - filtering the alphabetical list would re-sort the chips instead.
+  const tagById = new Map(tags.map((tag) => [tag.id, tag]))
+  const assigned = assignedIds.map((id) => tagById.get(id)).filter((tag): tag is TagRow => tag != null)
+  const suggestions = tags.filter((tag) => !assignedIds.includes(tag.id))
 
-  const submit = async (): Promise<void> => {
-    const name = newName.trim()
-    if (!name) return
-    const created = await onCreate(name)
-    setNewName('')
-    if (created && !assignedIds.includes(created.id)) onToggle(created.id)
+  const handleCreate = (name: string): void => {
+    void (async (): Promise<void> => {
+      const created = await onCreate(name)
+      if (created && !assignedIds.includes(created.id)) onToggle(created.id)
+    })()
   }
 
   return (
-    <div>
-      <div className="flex flex-wrap gap-1">
-        {tags.length === 0 && <span className="text-xs text-neutral-500">No tags yet.</span>}
-        {tags.map((tag) => (
-          <button
-            key={tag.id}
-            onClick={() => onToggle(tag.id)}
-            className={`rounded px-2 py-0.5 text-xs ${
-              assignedIds.includes(tag.id)
-                ? 'bg-blue-900/70 text-blue-200'
-                : 'bg-neutral-800 text-neutral-400 hover:text-neutral-200'
-            }`}
-          >
-            {tag.name}
-          </button>
-        ))}
-      </div>
-      <div className="mt-1 flex gap-1">
-        <input
-          value={newName}
-          onChange={(event) => setNewName(event.target.value)}
-          onKeyDown={(event) => event.key === 'Enter' && void submit()}
-          placeholder="+ New tag…"
-          className="min-w-0 flex-1 rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-xs text-neutral-100 placeholder:text-neutral-600 focus:border-neutral-500 focus:outline-none"
-        />
-        <button
-          onClick={() => void submit()}
-          className="shrink-0 rounded bg-neutral-800 px-2 py-1 text-xs text-neutral-300 hover:bg-neutral-700"
-        >
-          Add
-        </button>
-      </div>
-    </div>
+    <ChipComboBox
+      chips={assigned.map((tag) => ({ id: tag.id, name: tag.name }))}
+      suggestions={suggestions}
+      placeholder="Add tag…"
+      chipClassName="bg-orange-900/60 text-orange-300"
+      onRemove={onToggle}
+      onSelectExisting={onToggle}
+      onCreateNew={handleCreate}
+    />
   )
 }
 

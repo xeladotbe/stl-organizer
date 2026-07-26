@@ -8,7 +8,15 @@ stl-organizer is a Windows-first Electron desktop app for organizing 3D-printing
 
 ## Stack
 
-Electron + React 19 + TypeScript, scaffolded via `electron-vite`. Tailwind v4 (via `@tailwindcss/vite`, no PostCSS config needed). Zustand for renderer state. `better-sqlite3` for the local library database. `three.js` + `@react-three/fiber`/`drei` for 3D rendering. `chokidar` for filesystem watching. `@tanstack/react-virtual` for row virtualization in the list/grid views. `@floating-ui/react` for scroll-aware context/kebab menus.
+Electron + React 19 + TypeScript, scaffolded via `electron-vite`. Tailwind v4 (via `@tailwindcss/vite`, no PostCSS config needed). Zustand for renderer state. `better-sqlite3` for the local library database. `three.js` + `@react-three/fiber`/`drei` for 3D rendering. `chokidar` for filesystem watching. `@tanstack/react-virtual` for row virtualization in the list/grid views. `@floating-ui/react` for scroll-aware context/kebab menus. `radix-ui` for accessible dialog/select/toggle/tabs primitives. `vitest` for unit tests.
+
+## Contribution workflow
+
+As of the v0.0.1 release, every change goes through: **GitHub issue → feature branch → implementation with unit tests → pull request → user approval → merge.** No direct commits to `main` for feature work. `gh` (GitHub CLI) is installed for creating issues/PRs from the terminal; it authenticates per-user via `gh auth login` (interactive), not something a session can do unattended. `.github/workflows/ci.yml` runs `typecheck`/`lint`/`test` on every PR and push to `main` — treat a red check as blocking before asking for approval. `.github/workflows/release.yml` is separate: it only builds installers and publishes a GitHub Release when a `v*` tag is pushed (see the Release section below), unrelated to the per-PR CI checks.
+
+## Testing
+
+`vitest` (config: `vitest.config.ts`, same `@shared`/`@renderer` path aliases as the app). Test files live next to the code they cover as `*.test.ts` (e.g. `src/renderer/src/lib/format.test.ts`). Run with `npm run test` (single run, used in CI) or `npm run test:watch`. Coverage so far is intentionally limited to pure, dependency-free logic (`formatSize`, `toDisplayItems`, `isModelFile`) — nothing exercises `better-sqlite3` repositories or Electron/IPC yet. If a future feature needs DB-layer tests, prefer a real in-memory `better-sqlite3(':memory:')` instance running the actual migrations over mocking the DB — this project doesn't mock its own persistence layer anywhere else.
 
 ## Architecture
 

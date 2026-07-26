@@ -71,6 +71,44 @@ export function extractPart(
   return { position, normal, color, index, materialColor }
 }
 
+/** A mirrored transform (negative-determinant `matrixWorld` - e.g. a 3MF `<item>`/`<component>`
+ * with a -1 scale on one axis) flips vertex positions correctly via `applyMatrix4`, but leaves
+ * each triangle's vertex/index order exactly as authored. Three.js normally compensates for a
+ * mirrored mesh by flipping the GL front-face winding it expects at render time - but it keys that
+ * off the rendered *mesh's own* `matrixWorld` determinant (see `WebGLRenderer.renderBufferDirect`),
+ * and here the mirror has already been baked into the geometry while the `<mesh>` itself renders
+ * with an identity transform. That compensation never fires, so the mirrored part's faces read as
+ * back-facing under the default front-face convention and get culled - showing through to whatever
+ * is behind them instead of the actual (correctly positioned) surface. Reversing the winding order
+ * ourselves keeps the geometry self-consistent regardless of the mesh's own transform. See #36. */
+function reverseWindingOrder(geometry: THREE.BufferGeometry): void {
+  const index = geometry.index
+  if (index) {
+    const array = index.array as Uint16Array | Uint32Array
+    for (let i = 0; i + 2 < array.length; i += 3) {
+      const tmp = array[i + 1]
+      array[i + 1] = array[i + 2]
+      array[i + 2] = tmp
+    }
+    index.needsUpdate = true
+    return
+  }
+  for (const attribute of Object.values(geometry.attributes)) {
+    const itemSize = attribute.itemSize
+    const array = attribute.array as Float32Array
+    for (let vertex = 0; vertex + 2 < array.length / itemSize; vertex += 3) {
+      const bOffset = (vertex + 1) * itemSize
+      const cOffset = (vertex + 2) * itemSize
+      for (let k = 0; k < itemSize; k++) {
+        const tmp = array[bOffset + k]
+        array[bOffset + k] = array[cOffset + k]
+        array[cOffset + k] = tmp
+      }
+    }
+    attribute.needsUpdate = true
+  }
+}
+
 /** Both ThreeMFLoader and OBJLoader return a multi-part `Object3D`/`Group` (one mesh per
  * part/named object), unlike STLLoader which parses directly to a single geometry.
  *
@@ -87,6 +125,7 @@ export function extractPartsFromObject(object: THREE.Object3D): PartPayload[] {
     if (!(child as THREE.Mesh).isMesh) return
     const mesh = child as THREE.Mesh
     const geometry = mesh.geometry.clone().applyMatrix4(mesh.matrixWorld)
+    if (mesh.matrixWorld.determinant() < 0) reverseWindingOrder(geometry)
     parts.push(extractPart(geometry, materialColorOf(mesh.material)))
   })
   return parts

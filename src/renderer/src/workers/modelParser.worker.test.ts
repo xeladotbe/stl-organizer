@@ -47,6 +47,27 @@ const MODEL_XML = `<?xml version="1.0" encoding="UTF-8"?>
   </build>
 </model>`
 
+const MIRRORED_MODEL_XML = `<?xml version="1.0" encoding="UTF-8"?>
+<model unit="millimeter" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02">
+  <resources>
+    <object id="1" type="model">
+      <mesh>
+        <vertices>
+          <vertex x="0" y="0" z="0"/>
+          <vertex x="1" y="0" z="0"/>
+          <vertex x="0" y="1" z="0"/>
+        </vertices>
+        <triangles>
+          <triangle v1="0" v2="1" v3="2"/>
+        </triangles>
+      </mesh>
+    </object>
+  </resources>
+  <build>
+    <item objectid="1" transform="-1 0 0 0 1 0 0 0 1 0 0 0"/>
+  </build>
+</model>`
+
 const QUAD_MODEL_XML = `<?xml version="1.0" encoding="UTF-8"?>
 <model unit="millimeter" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02">
   <resources>
@@ -132,5 +153,28 @@ describe('modelParser.worker 3MF handling', () => {
     expect(parts[0].position).toHaveLength(12)
     expect(parts[0].index).not.toBeNull()
     expect(Array.from(parts[0].index ?? [])).toEqual([0, 1, 2, 0, 2, 3])
+  })
+
+  // Regression test for issue #36: a build item with a mirrored transform (negative-determinant
+  // matrixWorld, e.g. a -1 scale on one axis) had its vertex positions correctly flipped by
+  // applyMatrix4, but kept its original triangle winding order - three.js's own compensation for
+  // mirrored geometry only kicks in for a mirror baked into the *mesh's* transform, not one baked
+  // into the geometry ahead of time (see reverseWindingOrder's doc comment in the worker), so the
+  // resulting faces got backface-culled and rendered as missing/see-through instead of solid.
+  it('reverses triangle winding order for a mirrored (negative-determinant) build-item transform', async () => {
+    const { extractPartsFromObject } = await import('./modelParser.worker')
+    const buffer = zip3mf(MIRRORED_MODEL_XML)
+
+    const group = new ThreeMFLoader().parse(buffer)
+    const parts = extractPartsFromObject(group)
+
+    // Positions mirror across x as expected: (0,0,0),(1,0,0),(0,1,0) -> (0,0,0),(-1,0,0),(0,1,0).
+    const [x0, y0, z0, x1, y1, z1, x2, y2, z2] = parts[0].position
+    expect([x0, y0, z0]).toEqual([0, 0, 0])
+    expect([x1, y1, z1]).toEqual([-1, 0, 0])
+    expect([x2, y2, z2]).toEqual([0, 1, 0])
+
+    // Winding order (0,1,2) must be reversed to (0,2,1) to compensate for the mirror.
+    expect(Array.from(parts[0].index ?? [])).toEqual([0, 2, 1])
   })
 })

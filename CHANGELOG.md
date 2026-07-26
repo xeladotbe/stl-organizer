@@ -1,3 +1,29 @@
+## v0.0.2-rc.1
+
+Release candidate — testing build ahead of a v0.0.2 stable release.
+
+**New**
+
+- `.obj` model support alongside STL/3MF
+- `type:` search filter (`type:stl`, `type:3mf`, `type:obj`, `type:virtual`) — "model group" is now called "virtual file" throughout the UI
+- Glob pattern support (`*`, `?`, leading `!` negation) in filename search, with a shorter search placeholder
+- Typeahead tag/category chip input in the detail pane, with inline "create new" and Backspace-to-remove-last-chip
+
+**Improved**
+
+- Virtual files now sort in place instead of always trailing at the end of the list, and always show their members expanded
+- The Modified column shows date **and** time, formatted using the OS's own locale/format settings
+- Right-clicking a file outside the current selection no longer opens the detail pane/live preview — it only updates the multi-selection, matching Explorer/Finder
+- 3MF live preview: fixed a missing `DOMParser` polyfill, per-part transforms being silently dropped, and the triangle index being dropped — together these were causing `.3mf` files to fail to preview entirely or render as a garbled/holey mesh
+
+**Housekeeping**
+
+- Added unit test infrastructure (`vitest`), including full React component test coverage (jsdom + Testing Library) for the app's non-WebGL/non-virtualized UI
+
+**Known issues**
+
+- Some 3MF models can still render a handful of faces incorrectly in edge cases (tracked separately, still under investigation)
+
 ## v0.0.1
 
 First downloadable build. stl-organizer is a Windows/macOS desktop app that watches folders full of scattered `.stl`/`.3mf` files and helps you rediscover, dedupe, and organize them with real 3D previews instead of cryptic filenames.

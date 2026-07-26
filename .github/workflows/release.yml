@@ -37,14 +37,22 @@ jobs:
           # looking for a signing identity that doesn't exist.
           CSC_IDENTITY_AUTO_DISCOVERY: false
 
+      # CHANGELOG.md accumulates one `## v...` section per release - the whole file was fine as
+      # the release body when v0.0.1 was the only section, but would dump the entire history into
+      # every release body from here on. Extract just the top-most section instead.
+      - name: Extract this release's changelog section
+        shell: bash
+        run: awk '/^## /{if (found) exit; found=1} found' CHANGELOG.md > release-notes.md
+
       - uses: softprops/action-gh-release@v2
         with:
           files: |
             dist/*.exe
             dist/*.dmg
             dist/*.zip
-          body_path: CHANGELOG.md
+          body_path: release-notes.md
           draft: false
+          prerelease: ${{ contains(github.ref_name, '-') }}
           fail_on_unmatched_files: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

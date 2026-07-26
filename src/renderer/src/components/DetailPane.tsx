@@ -199,8 +199,14 @@ export function DetailPane(): React.JSX.Element | null {
   const addFilesToGroup = useLibraryStore((state) => state.addFilesToGroup)
   const removeFileFromGroup = useLibraryStore((state) => state.removeFileFromGroup)
   const deleteGroup = useLibraryStore((state) => state.deleteGroup)
+  const moveToTrash = useLibraryStore((state) => state.moveToTrash)
   const createTag = useLibraryStore((state) => state.createTag)
   const createCategory = useLibraryStore((state) => state.createCategory)
+
+  const handleTrash = (file: { id: number; filename: string; path: string }): void => {
+    if (!confirm(`Move "${file.filename}" to the Recycle Bin?\n${file.path}`)) return
+    void moveToTrash(file.id)
+  }
 
   if (!selection) return null
 
@@ -258,9 +264,18 @@ export function DetailPane(): React.JSX.Element | null {
                   {file.filename}
                 </button>
                 <button
+                  onClick={() => handleTrash(file)}
+                  aria-label="Move to Recycle Bin"
+                  title="Move to Recycle Bin"
+                  className="shrink-0 text-neutral-500 hover:text-red-400"
+                >
+                  🗑
+                </button>
+                <button
                   onClick={() => void removeFileFromGroup(file.id)}
                   aria-label="Remove from group"
-                  className="shrink-0 text-neutral-500 hover:text-red-400"
+                  title="Remove from group"
+                  className="shrink-0 text-neutral-500 hover:text-neutral-200"
                 >
                   ✕
                 </button>

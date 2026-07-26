@@ -4,8 +4,19 @@ import { useLibraryStore } from '../store/useLibraryStore'
 import { useVisibilityPriority } from '../hooks/useVisibilityPriority'
 import { formatSize } from '../lib/format'
 import { modelThumbnailUrl } from '@shared/modelFileUrl'
+import { ItemMenu, type MenuItem } from './ItemMenu'
+import { GroupNameDialog } from './GroupNameDialog'
 import type { FileRow, ModelGroupRow } from '@shared/types'
 import type { DisplayItem } from '../lib/groupFiles'
+
+type MenuTarget = { type: 'file'; file: FileRow } | { type: 'group'; group: ModelGroupRow }
+
+interface MenuAnchor {
+  target: MenuTarget
+  anchorEl: HTMLElement
+  offsetX: number
+  offsetY: number
+}
 
 type SortKey = 'filename' | 'ext' | 'size' | 'mtime_ms'
 type SortDirection = 'asc' | 'desc'
@@ -54,6 +65,9 @@ function sortValue(item: DisplayItem, key: SortKey): string | number {
   }
 }
 
+// Every real row (a lone file, an expanded group's member, or a group header) is the same
+// height, so a flat, fixed-size list is all the virtualizer needs — expand/collapse just
+// changes which rows are in this array, which the virtualizer picks up via `count`.
 type VirtualRow =
   | { type: 'file'; file: FileRow; indent?: boolean }
   | { type: 'group'; group: ModelGroupRow; members: FileRow[] }
@@ -110,13 +124,12 @@ interface FileRowViewProps {
   file: FileRow
   indent?: boolean
   isSelected: boolean
-  isChecked: boolean
-  showCheckbox: boolean
+  isMultiSelected: boolean
   categoryName?: string
   tagNames: string[]
   isDuplicate: boolean
-  onSelect: () => void
-  onToggleCheck: () => void
+  onSelect: (event: React.MouseEvent) => void
+  onContextMenu: (event: React.MouseEvent) => void
   registerVisible: (file: FileRow) => (el: Element | null) => (() => void) | void
 }
 
@@ -124,34 +137,25 @@ function FileRowView({
   file,
   indent,
   isSelected,
-  isChecked,
-  showCheckbox,
+  isMultiSelected,
   categoryName,
   tagNames,
   isDuplicate,
   onSelect,
-  onToggleCheck,
+  onContextMenu,
   registerVisible
 }: FileRowViewProps): React.JSX.Element {
   return (
     <tr
       ref={registerVisible(file)}
       onClick={onSelect}
+      onContextMenu={onContextMenu}
       className={`cursor-pointer border-t border-neutral-900 hover:bg-neutral-900 ${
-        isSelected ? 'bg-neutral-900' : ''
+        isMultiSelected ? 'bg-blue-950/50' : isSelected ? 'bg-neutral-900' : ''
       }`}
     >
       <td className="overflow-hidden px-4 py-2 text-neutral-200">
         <div className={`flex items-center gap-2 ${indent ? 'pl-6' : ''}`}>
-          {showCheckbox && (
-            <input
-              type="checkbox"
-              checked={isChecked}
-              onChange={onToggleCheck}
-              onClick={(event) => event.stopPropagation()}
-              className="shrink-0"
-            />
-          )}
           {file.thumbnail_status === 'done' ? (
             <img
               src={modelThumbnailUrl(file.id)}
@@ -182,23 +186,38 @@ export function FileTable({ items }: { items: DisplayItem[] }): React.JSX.Elemen
   const selection = useLibraryStore((state) => state.selection)
   const selectFile = useLibraryStore((state) => state.selectFile)
   const selectGroup = useLibraryStore((state) => state.selectGroup)
+  const toggleFileSelection = useLibraryStore((state) => state.toggleFileSelection)
+  const selectFileRange = useLibraryStore((state) => state.selectFileRange)
+  const clearFileSelection = useLibraryStore((state) => state.clearFileSelection)
   const duplicateIds = useLibraryStore((state) => state.duplicateIds)
   const tags = useLibraryStore((state) => state.tags)
   const categories = useLibraryStore((state) => state.categories)
   const fileTagIds = useLibraryStore((state) => state.fileTagIds)
   const selectedFileIds = useLibraryStore((state) => state.selectedFileIds)
-  const toggleFileSelection = useLibraryStore((state) => state.toggleFileSelection)
-  const groupingMode = useLibraryStore((state) => state.groupingMode)
+  const moveToTrash = useLibraryStore((state) => state.moveToTrash)
+  const deleteGroup = useLibraryStore((state) => state.deleteGroup)
+  const createGroup = useLibraryStore((state) => state.createGroup)
   const registerVisible = useVisibilityPriority()
 
   const scrollRef = useRef<HTMLDivElement>(null)
+  const theadRef = useRef<HTMLTableSectionElement>(null)
   const [widths, setWidths] = useState<Record<string, number>>(loadStoredWidths)
   const [sort, setSort] = useState<{ key: SortKey; direction: SortDirection } | null>(null)
   const [expandedGroups, setExpandedGroups] = useState<Set<number>>(new Set())
+  const [menu, setMenu] = useState<MenuAnchor | null>(null)
+  const [groupDialogFor, setGroupDialogFor] = useState<number[] | null>(null)
 
   useEffect(() => {
     localStorage.setItem(WIDTHS_STORAGE_KEY, JSON.stringify(widths))
   }, [widths])
+
+  useEffect(() => {
+    const handleKey = (event: KeyboardEvent): void => {
+      if (event.key === 'Escape') clearFileSelection()
+    }
+    window.addEventListener('keydown', handleKey)
+    return () => window.removeEventListener('keydown', handleKey)
+  }, [clearFileSelection])
 
   const tagById = useMemo(() => new Map(tags.map((tag) => [tag.id, tag])), [tags])
   const categoryById = useMemo(
@@ -221,6 +240,11 @@ export function FileTable({ items }: { items: DisplayItem[] }): React.JSX.Elemen
   const virtualRows = useMemo(
     () => buildVirtualRows(sortedItems, expandedGroups),
     [sortedItems, expandedGroups]
+  )
+
+  const orderedFileIds = useMemo(
+    () => virtualRows.filter((row) => row.type === 'file').map((row) => row.file.id),
+    [virtualRows]
   )
 
   const rowVirtualizer = useVirtualizer({
@@ -274,15 +298,91 @@ export function FileTable({ items }: { items: DisplayItem[] }): React.JSX.Elemen
   const fileTagLabels = (fileId: number): string[] =>
     (fileTagIds.get(fileId) ?? []).map((tagId) => tagById.get(tagId)?.name ?? String(tagId))
 
+  const handleFileClick = (event: React.MouseEvent, id: number): void => {
+    if (event.shiftKey) selectFileRange(orderedFileIds, id)
+    else if (event.ctrlKey || event.metaKey) toggleFileSelection(id)
+    else selectFile(id)
+  }
+
+  const handleTrash = (file: FileRow): void => {
+    if (!confirm(`Move "${file.filename}" to the Recycle Bin?\n${file.path}`)) return
+    void moveToTrash(file.id)
+  }
+
+  const handleTrashSelected = (ids: number[]): void => {
+    if (!confirm(`Move ${ids.length} files to the Recycle Bin?`)) return
+    for (const id of ids) void moveToTrash(id)
+    clearFileSelection()
+  }
+
+  const openMenuAt = (event: React.MouseEvent, target: MenuTarget): void => {
+    const anchorEl = event.currentTarget as HTMLElement
+    const rect = anchorEl.getBoundingClientRect()
+    setMenu({
+      target,
+      anchorEl,
+      offsetX: event.clientX - rect.left,
+      offsetY: event.clientY - rect.top
+    })
+  }
+
+  const openFileMenu = (event: React.MouseEvent, file: FileRow): void => {
+    if (!selectedFileIds.has(file.id)) {
+      // Right-clicking outside the current selection collapses it to just this file, matching
+      // standard file-explorer behavior.
+      selectFile(file.id)
+    }
+    openMenuAt(event, { type: 'file', file })
+  }
+
+  const menuItems: MenuItem[] = (() => {
+    if (!menu) return []
+    const target = menu.target
+    if (target.type === 'group') {
+      return [{ label: 'Ungroup', onClick: () => void deleteGroup(target.group.id) }]
+    }
+    const ids = selectedFileIds.has(target.file.id) ? [...selectedFileIds] : [target.file.id]
+    if (ids.length > 1) {
+      return [
+        { label: 'Group…', onClick: () => setGroupDialogFor(ids) },
+        { label: `Delete (${ids.length})`, danger: true, onClick: () => handleTrashSelected(ids) }
+      ]
+    }
+    return [{ label: 'Delete', danger: true, onClick: () => handleTrash(target.file) }]
+  })()
+
   return (
     <div ref={scrollRef} className="h-full overflow-y-auto">
+      {menu && (
+        <ItemMenu
+          anchorEl={menu.anchorEl}
+          offsetX={menu.offsetX}
+          offsetY={menu.offsetY}
+          topPadding={theadRef.current?.offsetHeight ?? 0}
+          items={menuItems}
+          onClose={() => setMenu(null)}
+        />
+      )}
+      {groupDialogFor && (
+        <GroupNameDialog
+          count={groupDialogFor.length}
+          onCancel={() => setGroupDialogFor(null)}
+          onConfirm={(name) => {
+            void createGroup(name, groupDialogFor)
+            setGroupDialogFor(null)
+          }}
+        />
+      )}
       <table className="w-full text-left text-sm" style={{ tableLayout: 'fixed' }}>
         <colgroup>
           {COLUMNS.map((column) => (
             <col key={column.key} style={{ width: widths[column.key] }} />
           ))}
         </colgroup>
-        <thead className="sticky top-0 z-10 bg-neutral-950 text-xs uppercase text-neutral-500">
+        <thead
+          ref={theadRef}
+          className="sticky top-0 z-10 bg-neutral-950 text-xs uppercase text-neutral-500"
+        >
           <tr>
             {COLUMNS.map((column) => (
               <th key={column.key} className="relative select-none px-4 py-2 font-medium">
@@ -323,8 +423,7 @@ export function FileTable({ items }: { items: DisplayItem[] }): React.JSX.Elemen
                   file={row.file}
                   indent={row.indent}
                   isSelected={selection?.type === 'file' && selection.id === row.file.id}
-                  isChecked={selectedFileIds.has(row.file.id)}
-                  showCheckbox={groupingMode}
+                  isMultiSelected={selectedFileIds.has(row.file.id)}
                   categoryName={
                     row.file.category_id != null
                       ? categoryById.get(row.file.category_id)?.name
@@ -332,8 +431,12 @@ export function FileTable({ items }: { items: DisplayItem[] }): React.JSX.Elemen
                   }
                   tagNames={fileTagLabels(row.file.id)}
                   isDuplicate={duplicateIds.has(row.file.id)}
-                  onSelect={() => selectFile(row.file.id)}
-                  onToggleCheck={() => toggleFileSelection(row.file.id)}
+                  onSelect={(event) => handleFileClick(event, row.file.id)}
+                  onContextMenu={(event) => {
+                    event.preventDefault()
+                    event.stopPropagation()
+                    openFileMenu(event, row.file)
+                  }}
                   registerVisible={registerVisible}
                 />
               )
@@ -353,6 +456,11 @@ export function FileTable({ items }: { items: DisplayItem[] }): React.JSX.Elemen
               <tr
                 key={virtualItem.key}
                 onClick={() => selectGroup(group.id)}
+                onContextMenu={(event) => {
+                  event.preventDefault()
+                  event.stopPropagation()
+                  openMenuAt(event, { type: 'group', group })
+                }}
                 className={`cursor-pointer border-t border-neutral-900 hover:bg-neutral-900 ${
                   isSelected ? 'bg-neutral-900' : ''
                 }`}

@@ -1,23 +1,40 @@
-import { Component, Suspense, useMemo, type ReactNode } from 'react'
-import { Canvas, useLoader } from '@react-three/fiber'
-import { Bounds, OrbitControls } from '@react-three/drei'
-import { STLLoader } from 'three/addons/loaders/STLLoader.js'
-import { ThreeMFLoader } from 'three/addons/loaders/3MFLoader.js'
+import { Component, useEffect, useMemo, type ReactNode } from 'react'
+import { Canvas } from '@react-three/fiber'
+import { Bounds, OrbitControls, useBounds } from '@react-three/drei'
 import { modelFileUrl } from '@shared/modelFileUrl'
+import { useModelParts } from '../hooks/useModelParts'
 import type { FileRow } from '@shared/types'
 
-function StlMesh({ url }: { url: string }): React.JSX.Element {
-  const geometry = useLoader(STLLoader, url)
-  return (
-    <mesh geometry={geometry}>
-      <meshStandardMaterial color="#a3a3a3" metalness={0.1} roughness={0.6} />
-    </mesh>
-  )
-}
+function ParsedModel({ url, ext }: { url: string; ext: FileRow['ext'] }): React.JSX.Element | null {
+  const { parts, error } = useModelParts(url, ext)
+  const bounds = useBounds()
 
-function ThreeMfObject({ url }: { url: string }): React.JSX.Element {
-  const object = useLoader(ThreeMFLoader, url)
-  return <primitive object={object} />
+  // `Bounds`' own auto-fit runs once on <Canvas> mount, keyed off canvas size — not off when
+  // this async-loaded geometry actually shows up. It fires before the worker has resolved
+  // anything, sees an empty scene, and frames a meaningless default box. Refit for real once the
+  // parsed mesh is actually in the scene graph.
+  useEffect(() => {
+    if (parts) bounds.refresh().fit().clip()
+  }, [parts, bounds])
+
+  // Thrown during render (not inside an effect/callback), so ModelErrorBoundary below catches it.
+  if (error) throw new Error('failed to parse model')
+  if (!parts) return null
+
+  return (
+    <>
+      {parts.map((part, index) => (
+        <mesh key={index} geometry={part.geometry}>
+          <meshStandardMaterial
+            color={part.hasVertexColors ? '#ffffff' : (part.color ?? '#a3a3a3')}
+            vertexColors={part.hasVertexColors}
+            metalness={0.1}
+            roughness={0.6}
+          />
+        </mesh>
+      ))}
+    </>
+  )
 }
 
 interface ErrorBoundaryProps {
@@ -62,11 +79,9 @@ export function ModelPreview({ file }: { file: FileRow }): React.JSX.Element {
         <Canvas camera={{ position: [40, 40, 40], fov: 45 }}>
           <ambientLight intensity={0.6} />
           <directionalLight position={[5, 8, 5]} intensity={0.8} />
-          <Suspense fallback={null}>
-            <Bounds fit clip observe margin={1.3}>
-              {file.ext === 'stl' ? <StlMesh url={url} /> : <ThreeMfObject url={url} />}
-            </Bounds>
-          </Suspense>
+          <Bounds fit clip observe margin={1.3}>
+            <ParsedModel key={url} url={url} ext={file.ext} />
+          </Bounds>
           <OrbitControls makeDefault />
         </Canvas>
       </ModelErrorBoundary>

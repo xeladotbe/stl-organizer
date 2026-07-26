@@ -39,22 +39,14 @@ export function FileList(): React.JSX.Element {
   const fileTagIds = useLibraryStore((state) => state.fileTagIds)
   const categories = useLibraryStore((state) => state.categories)
   const groups = useLibraryStore((state) => state.groups)
-  const selectedFileIds = useLibraryStore((state) => state.selectedFileIds)
-  const toggleFileSelection = useLibraryStore((state) => state.toggleFileSelection)
-  const clearFileSelection = useLibraryStore((state) => state.clearFileSelection)
-  const groupingMode = useLibraryStore((state) => state.groupingMode)
-  const toggleGroupingMode = useLibraryStore((state) => state.toggleGroupingMode)
-  const createGroup = useLibraryStore((state) => state.createGroup)
   const [search, setSearch] = useState('')
   const [displayMode, setDisplayMode] = useState<DisplayMode>(loadStoredDisplayMode)
-  const [groupName, setGroupName] = useState('')
 
   useEffect(() => {
     localStorage.setItem(DISPLAY_MODE_STORAGE_KEY, displayMode)
   }, [displayMode])
 
   const groupById = useMemo(() => new Map(groups.map((group) => [group.id, group])), [groups])
-  const fileById = useMemo(() => new Map(files.map((file) => [file.id, file])), [files])
 
   const visibleFiles = useMemo(() => {
     const { textTokens, tagTokens, categoryTokens } = parseSearchQuery(search)
@@ -110,12 +102,6 @@ export function FileList(): React.JSX.Element {
 
   const displayItems = useMemo(() => toDisplayItems(visibleFiles, groups), [visibleFiles, groups])
 
-  const handleGroup = (): void => {
-    const name = groupName.trim() || 'New model'
-    void createGroup(name, [...selectedFileIds])
-    setGroupName('')
-  }
-
   return (
     <main className="flex flex-1 flex-col overflow-hidden">
       <div className="border-b border-neutral-800 px-4 py-3">
@@ -148,66 +134,7 @@ export function FileList(): React.JSX.Element {
               Grid
             </button>
           </div>
-          <button
-            onClick={toggleGroupingMode}
-            className={`shrink-0 rounded border px-2 py-1.5 text-xs ${
-              groupingMode
-                ? 'border-blue-800 bg-blue-900/70 text-blue-200'
-                : 'border-neutral-700 text-neutral-500 hover:text-neutral-300'
-            }`}
-          >
-            Select
-          </button>
         </div>
-        {groupingMode && (
-          <div className="mt-2 rounded border border-neutral-700 bg-neutral-900 px-2 py-1.5 text-xs">
-            <div className="flex items-center gap-2">
-              <span className="shrink-0 text-neutral-300">{selectedFileIds.size} selected</span>
-              <input
-                value={groupName}
-                onChange={(event) => setGroupName(event.target.value)}
-                onKeyDown={(event) => event.key === 'Enter' && handleGroup()}
-                placeholder="Model name…"
-                disabled={selectedFileIds.size < 2}
-                className="max-w-xs flex-1 rounded border border-neutral-700 bg-neutral-950 px-2 py-1 text-neutral-100 placeholder:text-neutral-600 focus:border-neutral-500 focus:outline-none disabled:opacity-50"
-              />
-              <button
-                onClick={handleGroup}
-                disabled={selectedFileIds.size < 2}
-                className="shrink-0 rounded bg-blue-900/70 px-2 py-1 text-blue-200 hover:bg-blue-900 disabled:pointer-events-none disabled:opacity-50"
-              >
-                Group into model
-              </button>
-              {selectedFileIds.size > 0 && (
-                <button
-                  onClick={clearFileSelection}
-                  className="shrink-0 rounded px-2 py-1 text-neutral-500 hover:text-neutral-300"
-                >
-                  Clear
-                </button>
-              )}
-            </div>
-            {selectedFileIds.size > 0 && (
-              <div className="mt-2 flex flex-wrap gap-1">
-                {[...selectedFileIds].map((id) => (
-                  <span
-                    key={id}
-                    className="inline-flex items-center gap-1 rounded bg-neutral-800 px-2 py-0.5 text-neutral-300"
-                  >
-                    <span className="max-w-40 truncate">{fileById.get(id)?.filename ?? id}</span>
-                    <button
-                      onClick={() => toggleFileSelection(id)}
-                      aria-label="Deselect"
-                      className="text-neutral-500 hover:text-neutral-200"
-                    >
-                      ✕
-                    </button>
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
       </div>
       <div className="flex-1 overflow-hidden">
         {filesLoading && files.length === 0 ? (

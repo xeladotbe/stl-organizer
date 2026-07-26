@@ -85,6 +85,27 @@ export function removeFileFromGroup(fileId: number): void {
   remove()
 }
 
+/**
+ * Called after a grouped file is trashed. If the group is down to <=1 still-visible (missing=0)
+ * member, dissolves it — a "group" of one file is meaningless. Deliberately does not touch the
+ * trashed file's own group_id, so restoring it from the Recycle Bin puts it back in its group.
+ */
+export function dissolveGroupIfSparse(groupId: number): void {
+  const db = getDb()
+  const now = Date.now()
+  const dissolve = db.transaction(() => {
+    const remaining = db
+      .prepare('SELECT id FROM files WHERE group_id = ? AND missing = 0')
+      .all(groupId) as { id: number }[]
+    if (remaining.length > 1) return
+    for (const file of remaining) {
+      db.prepare('UPDATE files SET group_id = NULL, updated_at = ? WHERE id = ?').run(now, file.id)
+    }
+    db.prepare('DELETE FROM model_groups WHERE id = ?').run(groupId)
+  })
+  dissolve()
+}
+
 /** Dissolves a group entirely: every member reverts to ungrouped, the group row is deleted. */
 export function deleteGroup(id: number): void {
   const db = getDb()

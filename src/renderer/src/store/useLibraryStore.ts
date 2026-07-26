@@ -24,7 +24,7 @@ interface LibraryState {
   fileTagIds: Map<number, number[]>
   selection: Selection
   selectedFileIds: Set<number>
-  groupingMode: boolean
+  selectionAnchorId: number | null
   scanProgress: Record<number, ScanProgressEvent>
   view: LibraryView
   foldersLoading: boolean
@@ -44,8 +44,8 @@ interface LibraryState {
   selectFile: (id: number | null) => void
   selectGroup: (id: number) => void
   toggleFileSelection: (id: number) => void
+  selectFileRange: (orderedIds: number[], toId: number) => void
   clearFileSelection: () => void
-  toggleGroupingMode: () => void
   setView: (view: LibraryView) => void
   moveToTrash: (id: number) => Promise<void>
   renameFile: (id: number, newBaseName: string) => Promise<void>
@@ -89,7 +89,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   fileTagIds: new Map(),
   selection: null,
   selectedFileIds: new Set(),
-  groupingMode: false,
+  selectionAnchorId: null,
   scanProgress: {},
   view: 'all',
   foldersLoading: false,
@@ -182,7 +182,15 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
     await get().loadDuplicates()
   },
 
-  selectFile: (id) => set({ selection: id == null ? null : { type: 'file', id } }),
+  // A plain "select this one file" click always collapses any active multi-selection down to
+  // just this file — matches standard file-explorer behavior (ctrl/shift are the only ways to
+  // build up a multi-selection). selectFile(null) only closes the detail pane and deliberately
+  // leaves an in-progress multi-selection alone.
+  selectFile: (id) =>
+    set({
+      selection: id == null ? null : { type: 'file', id },
+      ...(id != null ? { selectedFileIds: new Set([id]), selectionAnchorId: id } : {})
+    }),
   selectGroup: (id) => set({ selection: { type: 'group', id } }),
 
   toggleFileSelection: (id) => {
@@ -190,17 +198,25 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
       const next = new Set(state.selectedFileIds)
       if (next.has(id)) next.delete(id)
       else next.add(id)
-      return { selectedFileIds: next }
+      return { selectedFileIds: next, selectionAnchorId: id }
     })
   },
-  clearFileSelection: () => set({ selectedFileIds: new Set() }),
 
-  toggleGroupingMode: () => {
-    set((state) => ({
-      groupingMode: !state.groupingMode,
-      selectedFileIds: state.groupingMode ? new Set() : state.selectedFileIds
-    }))
+  // Range from the current anchor to `toId`, within the caller's currently-displayed file order.
+  // Leaves the anchor itself unchanged so repeated shift-clicks keep extending/shrinking from the
+  // same starting point instead of drifting.
+  selectFileRange: (orderedIds, toId) => {
+    set((state) => {
+      const anchor = state.selectionAnchorId ?? toId
+      const fromIndex = orderedIds.indexOf(anchor)
+      const toIndex = orderedIds.indexOf(toId)
+      if (fromIndex === -1 || toIndex === -1) return { selectedFileIds: new Set([toId]) }
+      const [start, end] = fromIndex <= toIndex ? [fromIndex, toIndex] : [toIndex, fromIndex]
+      return { selectedFileIds: new Set(orderedIds.slice(start, end + 1)) }
+    })
   },
+
+  clearFileSelection: () => set({ selectedFileIds: new Set(), selectionAnchorId: null }),
 
   setView: (view) => set({ view }),
 

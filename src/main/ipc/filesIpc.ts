@@ -9,6 +9,7 @@ import {
   setFileTags,
   renameFile
 } from '../db/repositories/filesRepo'
+import { dissolveGroupIfSparse } from '../db/repositories/modelGroupsRepo'
 import { setPriorityFileIds } from '../priorityQueue'
 import { scheduleHashSweep } from '../hashing/hashQueue'
 import { scheduleThumbnailSweep } from '../thumbnails/thumbnailQueue'
@@ -23,6 +24,7 @@ export function registerFileHandlers(): void {
     if (!file) return
     await shell.trashItem(file.path)
     markMissingByPath(file.path)
+    if (file.group_id != null) dissolveGroupIfSparse(file.group_id)
   })
 
   // Rename on disk first, then update the DB row's path — by the time chokidar's debounced

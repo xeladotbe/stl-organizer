@@ -43,6 +43,7 @@ interface LibraryState {
   removeFolder: (id: number) => Promise<void>
   selectFile: (id: number | null) => void
   selectGroup: (id: number) => void
+  collapseSelectionTo: (id: number) => void
   toggleFileSelection: (id: number) => void
   selectFileRange: (orderedIds: number[], toId: number) => void
   clearFileSelection: () => void
@@ -192,6 +193,13 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
       ...(id != null ? { selectedFileIds: new Set([id]), selectionAnchorId: id } : {})
     }),
   selectGroup: (id) => set({ selection: { type: 'group', id } }),
+
+  // Right-clicking (or opening the ⋮ menu for) a file outside the current selection should
+  // still collapse the selection down to just that file - so the context menu acts on the right
+  // target and it reads as "selected" via the multi-select highlight - but must NOT touch
+  // `selection` itself, since that's what opens the detail pane / live preview. Only a plain
+  // left-click (selectFile) is allowed to do that.
+  collapseSelectionTo: (id) => set({ selectedFileIds: new Set([id]), selectionAnchorId: id }),
 
   toggleFileSelection: (id) => {
     set((state) => {

@@ -45,6 +45,7 @@ export function useModelParts(url: string, ext: ModelExt): ModelPartsState {
         geometry.setAttribute('position', new THREE.BufferAttribute(part.position, 3))
         if (part.normal) geometry.setAttribute('normal', new THREE.BufferAttribute(part.normal, 3))
         if (part.color) geometry.setAttribute('color', new THREE.BufferAttribute(part.color, 3))
+        if (part.index) geometry.setIndex(new THREE.BufferAttribute(part.index, 1))
         return {
           geometry,
           color: part.materialColor ? new THREE.Color(...part.materialColor) : null,

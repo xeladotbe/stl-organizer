@@ -4,7 +4,7 @@ import { useLibraryStore } from '../store/useLibraryStore'
 import { FileTable } from './FileTable'
 import { FileGrid } from './FileGrid'
 import { toDisplayItems } from '../lib/groupFiles'
-import { parseSearchQuery } from '../lib/searchQuery'
+import { parseSearchQuery, createTextMatcher } from '../lib/searchQuery'
 
 type DisplayMode = 'list' | 'grid'
 
@@ -42,6 +42,7 @@ export function FileList(): React.JSX.Element {
       return files
     }
 
+    const textMatchersByToken = textTokens.map((token) => createTextMatcher(token))
     const tagIdSetsByToken = tagTokens.map(
       (token) =>
         new Set(tags.filter((tag) => tag.name.toLowerCase().includes(token)).map((tag) => tag.id))
@@ -58,11 +59,11 @@ export function FileList(): React.JSX.Element {
     return files.filter((file) => {
       const group = file.group_id != null ? groupById.get(file.group_id) : undefined
 
-      if (textTokens.length > 0) {
+      if (textMatchersByToken.length > 0) {
         const filenameLower = file.filename.toLowerCase()
         const groupNameLower = group?.name.toLowerCase() ?? ''
-        const matchesText = textTokens.every(
-          (token) => filenameLower.includes(token) || groupNameLower.includes(token)
+        const matchesText = textMatchersByToken.every(
+          (matches) => matches(filenameLower) || matches(groupNameLower)
         )
         if (!matchesText) return false
       }
@@ -105,7 +106,7 @@ export function FileList(): React.JSX.Element {
           <input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search files… (tag:name, category:name, type:virtual|stl|3mf|obj)"
+            placeholder="Search files…"
             className="w-full max-w-sm rounded border border-neutral-700 bg-neutral-900 px-3 py-1.5 text-sm text-neutral-100 placeholder:text-neutral-500 focus:border-neutral-500 focus:outline-none"
           />
           <ToggleGroup.Root

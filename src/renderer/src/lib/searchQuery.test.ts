@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseSearchQuery } from './searchQuery'
+import { parseSearchQuery, createTextMatcher } from './searchQuery'
 
 describe('parseSearchQuery', () => {
   it('treats plain words as text tokens', () => {
@@ -51,5 +51,60 @@ describe('parseSearchQuery', () => {
       categoryTokens: [],
       typeTokens: []
     })
+  })
+})
+
+describe('createTextMatcher', () => {
+  it('falls back to plain substring matching when there are no wildcards', () => {
+    const matches = createTextMatcher('spacer')
+    expect(matches('my_spacer_v2.stl')).toBe(true)
+    expect(matches('bracket.stl')).toBe(false)
+  })
+
+  it('matches a * glob against the whole filename', () => {
+    expect(createTextMatcher('spacer*.stl')('spacer_v2.stl')).toBe(true)
+    expect(createTextMatcher('spacer*.stl')('my_spacer_v2.stl')).toBe(false)
+    expect(createTextMatcher('*spacer*')('my_spacer_v2.stl')).toBe(true)
+  })
+
+  it('matches a ? glob against exactly one character', () => {
+    const matches = createTextMatcher('spacer?.stl')
+    expect(matches('spacer1.stl')).toBe(true)
+    expect(matches('spacer12.stl')).toBe(false)
+    expect(matches('spacer.stl')).toBe(false)
+  })
+
+  it('is case-insensitive', () => {
+    expect(createTextMatcher('spacer*')('SPACER_V2.STL')).toBe(true)
+  })
+
+  it('treats glob-adjacent regex characters literally', () => {
+    const matches = createTextMatcher('v2.0*')
+    expect(matches('v2.0_final.stl')).toBe(true)
+    expect(matches('v2x0_final.stl')).toBe(false)
+  })
+
+  it('treats parentheses and other extglob-ish characters as literal', () => {
+    const matches = createTextMatcher('part (2)*')
+    expect(matches('part (2).stl')).toBe(true)
+  })
+
+  it('negates the whole pattern with a leading !', () => {
+    const matches = createTextMatcher('!*.obj')
+    expect(matches('part.obj')).toBe(false)
+    expect(matches('part.stl')).toBe(true)
+    expect(matches('part.3mf')).toBe(true)
+  })
+
+  it('negates an exact name with a leading ! and no other wildcards', () => {
+    const matches = createTextMatcher('!part.stl')
+    expect(matches('part.stl')).toBe(false)
+    expect(matches('other.stl')).toBe(true)
+  })
+
+  it('treats a non-leading ! as a literal character', () => {
+    const matches = createTextMatcher('final!*.stl')
+    expect(matches('final!.stl')).toBe(true)
+    expect(matches('part.stl')).toBe(false)
   })
 })

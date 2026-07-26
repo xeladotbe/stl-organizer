@@ -1,8 +1,46 @@
+import picomatch from 'picomatch'
+
 export interface ParsedSearchQuery {
   textTokens: string[]
   tagTokens: string[]
   categoryTokens: string[]
   typeTokens: string[]
+}
+
+export type TextMatcher = (value: string) => boolean
+
+// Extglob/brace/globstar features are deliberately switched off - we only want `*`, `?` and a
+// leading `!` (negate the whole pattern, e.g. `!*.obj`) to be meaningful.
+const GLOB_OPTIONS = { nocase: true, dot: true, noext: true, nobrace: true, noglobstar: true }
+
+/** A token needs picomatch rather than plain substring matching if it uses `*`/`?`, or negates
+ * via a leading `!` (picomatch's own convention - `!` anywhere else in the pattern is already
+ * treated as a literal character by picomatch itself, no special-casing needed here). */
+function isGlobToken(token: string): boolean {
+  return /[*?]/.test(token) || token.startsWith('!')
+}
+
+// Regex/glob metacharacters other than `*`/`?`/`!` that real filenames commonly contain literally
+// (e.g. "part (2).stl", "v2.0_final.stl"). `noext`/`nobrace` above only disable picomatch's
+// *prefixed* extglob/brace forms (`+(...)`, `{a,b}`) - a bare `(...)`/`{...}` in the pattern still
+// gets compiled as a regex group/quantifier, so these must be escaped to literal characters
+// ourselves before picomatch ever sees them. `!` is deliberately excluded - see isGlobToken.
+const GLOB_LITERAL_CHARS = /[\\^$.|+()[\]{}@]/g
+
+function escapeGlobLiterals(token: string): string {
+  return token.replace(GLOB_LITERAL_CHARS, '\\$&')
+}
+
+/** Builds a matcher for one parsed search token - a token using glob syntax (see `isGlobToken`)
+ * is compiled once into a whole-name glob matcher (via picomatch), everything else falls back to
+ * a plain substring match. Compiling per-token up front (rather than per file) keeps filtering a
+ * large library cheap. */
+export function createTextMatcher(token: string): TextMatcher {
+  if (isGlobToken(token)) {
+    const isMatch = picomatch(escapeGlobLiterals(token), GLOB_OPTIONS)
+    return (value: string) => isMatch(value)
+  }
+  return (value: string) => value.includes(token)
 }
 
 /** Splits a search query into plain filename/group-name tokens, `tag:name`, `category:name` and

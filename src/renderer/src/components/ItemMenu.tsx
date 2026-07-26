@@ -1,5 +1,14 @@
 import { useEffect } from 'react'
-import { useFloating, autoUpdate, offset, flip, shift, hide } from '@floating-ui/react'
+import {
+  useFloating,
+  autoUpdate,
+  offset,
+  flip,
+  shift,
+  hide,
+  useDismiss,
+  useInteractions
+} from '@floating-ui/react'
 
 export interface MenuItem {
   label: string
@@ -26,7 +35,7 @@ export function ItemMenu({
   items: MenuItem[]
   onClose: () => void
 }): React.JSX.Element {
-  const { refs, floatingStyles, middlewareData } = useFloating({
+  const { refs, floatingStyles, middlewareData, context } = useFloating({
     open: true,
     onOpenChange: (open) => {
       if (!open) onClose()
@@ -35,6 +44,14 @@ export function ItemMenu({
     whileElementsMounted: autoUpdate,
     middleware: [offset(4), flip(), shift({ padding: 8 }), hide({ padding: { top: topPadding } })]
   })
+
+  // Closing on outside click/right-click and Escape is floating-ui's own dismiss logic rather
+  // than hand-rolled window listeners - it correctly ignores the same interaction that opened the
+  // menu (no artificial setTimeout delay needed) and understands the virtual reference element via
+  // `contextElement` below. This replaced a hand-rolled `window.addEventListener('click', ...)`
+  // version that could fail to close the menu on an outside click (issue #19).
+  const dismiss = useDismiss(context)
+  const { getFloatingProps } = useInteractions([dismiss])
 
   useEffect(() => {
     // A virtual element: its position is recomputed from the anchor's *live* rect (plus the
@@ -60,24 +77,11 @@ export function ItemMenu({
     if (isHidden) onClose()
   }, [isHidden, onClose])
 
+  // useDismiss has no "window blur" dismiss type (e.g. alt-tabbing away while the menu is open) -
+  // kept as one small manual listener alongside it.
   useEffect(() => {
-    // Deferred so the same click/contextmenu event that opened the menu doesn't also close it.
-    const timer = setTimeout(() => {
-      window.addEventListener('click', onClose)
-      window.addEventListener('contextmenu', onClose)
-      window.addEventListener('blur', onClose)
-    }, 0)
-    const handleKey = (event: KeyboardEvent): void => {
-      if (event.key === 'Escape') onClose()
-    }
-    window.addEventListener('keydown', handleKey)
-    return () => {
-      clearTimeout(timer)
-      window.removeEventListener('click', onClose)
-      window.removeEventListener('contextmenu', onClose)
-      window.removeEventListener('blur', onClose)
-      window.removeEventListener('keydown', handleKey)
-    }
+    window.addEventListener('blur', onClose)
+    return () => window.removeEventListener('blur', onClose)
   }, [onClose])
 
   return (
@@ -90,6 +94,7 @@ export function ItemMenu({
       className="overflow-hidden rounded border border-neutral-700 bg-neutral-900 py-1 text-sm shadow-lg"
       onClick={(event) => event.stopPropagation()}
       onContextMenu={(event) => event.preventDefault()}
+      {...getFloatingProps()}
     >
       {items.map((item, index) => (
         <button

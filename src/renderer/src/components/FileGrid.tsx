@@ -6,6 +6,7 @@ import { modelThumbnailUrl } from '@shared/modelFileUrl'
 import { ItemMenu, type MenuItem } from './ItemMenu'
 import { GroupNameDialog } from './GroupNameDialog'
 import { ConfirmDialog } from './ConfirmDialog'
+import { itemKeyOf, findAnchorRowIndex } from '../lib/gridScrollAnchor'
 import type { FileRow, ModelGroupRow } from '@shared/types'
 import type { DisplayItem } from '../lib/groupFiles'
 
@@ -207,10 +208,27 @@ export function FileGrid({ items }: { items: DisplayItem[] }): React.JSX.Element
   const scrollRef = useRef<HTMLDivElement>(null)
   const [contentWidth, setContentWidth] = useState(0)
 
+  // Opening/closing the detail pane resizes this grid, which changes how many tiles fit per
+  // row and reshuffles every row after the one that changed - without this, the tile the user
+  // just clicked can end up scrolled out of view. `anchorKeyRef` remembers which tile was at
+  // the top of the viewport right before a resize so the effect below can scroll back to it
+  // once the grid has re-chunked into rows for the new width.
+  const anchorKeyRef = useRef<string | null>(null)
+  const gridRowsRef = useRef<DisplayItem[][]>([])
+  const rowVirtualizerRef = useRef<ReturnType<
+    typeof useVirtualizer<HTMLDivElement, Element>
+  > | null>(null)
+
   useEffect(() => {
     const el = scrollRef.current
     if (!el) return
     const observer = new ResizeObserver((entries) => {
+      const virtualizer = rowVirtualizerRef.current
+      const topRow = virtualizer?.getVirtualItems()[0]
+      const rows = gridRowsRef.current
+      if (topRow && rows[topRow.index]?.length) {
+        anchorKeyRef.current = itemKeyOf(rows[topRow.index][0])
+      }
       setContentWidth(entries[0].contentRect.width)
     })
     observer.observe(el)
@@ -238,6 +256,15 @@ export function FileGrid({ items }: { items: DisplayItem[] }): React.JSX.Element
     estimateSize: () => ESTIMATED_ROW_HEIGHT,
     overscan: 4
   })
+
+  gridRowsRef.current = gridRows
+  rowVirtualizerRef.current = rowVirtualizer
+
+  useEffect(() => {
+    const rowIndex = findAnchorRowIndex(gridRows, anchorKeyRef.current)
+    anchorKeyRef.current = null
+    if (rowIndex >= 0) rowVirtualizer.scrollToIndex(rowIndex, { align: 'start' })
+  }, [gridRows, rowVirtualizer])
 
   const handleFileClick = (event: React.MouseEvent, id: number): void => {
     if (event.shiftKey) selectFileRange(orderedFileIds, id)

@@ -6,7 +6,7 @@ export interface ParsedSearchQuery {
 }
 
 /** Splits a search query into plain filename/group-name tokens, `tag:name`, `category:name` and
- * `type:virtual|stl|3mf` tokens. */
+ * `type:virtual|stl|3mf|obj` tokens. */
 export function parseSearchQuery(query: string): ParsedSearchQuery {
   const textTokens: string[] = []
   const tagTokens: string[] = []

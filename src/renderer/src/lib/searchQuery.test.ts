@@ -36,11 +36,11 @@ describe('parseSearchQuery', () => {
   })
 
   it('collects multiple type: tokens', () => {
-    expect(parseSearchQuery('type:stl type:3mf')).toEqual({
+    expect(parseSearchQuery('type:stl type:3mf type:obj')).toEqual({
       textTokens: [],
       tagTokens: [],
       categoryTokens: [],
-      typeTokens: ['stl', '3mf']
+      typeTokens: ['stl', '3mf', 'obj']
     })
   })
 

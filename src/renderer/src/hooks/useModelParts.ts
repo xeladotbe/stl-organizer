@@ -16,7 +16,7 @@ interface ModelPartsState {
 }
 
 /**
- * Parses an STL/3MF file off the main thread. The actual fetch + geometry decode (the part that
+ * Parses an STL/3MF/OBJ file off the main thread. The actual fetch + geometry decode (the part that
  * blocks the UI for large files) runs in a dedicated Worker; this hook only ever touches the
  * small, cheap step of wrapping the transferred typed arrays back into a BufferGeometry.
  */

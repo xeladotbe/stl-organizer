@@ -2,7 +2,7 @@
 
 export type HashStatus = 'pending' | 'hashing' | 'done' | 'error'
 export type ThumbnailStatus = 'pending' | 'rendering' | 'done' | 'error' | 'unsupported'
-export type ModelExt = 'stl' | '3mf'
+export type ModelExt = 'stl' | '3mf' | 'obj'
 
 export interface WatchedFolderRow {
   id: number

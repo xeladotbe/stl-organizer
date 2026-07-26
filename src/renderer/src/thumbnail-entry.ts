@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import { STLLoader } from 'three/addons/loaders/STLLoader.js'
 import { ThreeMFLoader } from 'three/addons/loaders/3MFLoader.js'
+import { OBJLoader } from 'three/addons/loaders/OBJLoader.js'
 import { modelFileUrl } from '@shared/modelFileUrl'
 import type { ThumbnailJob } from '@shared/types'
 
@@ -32,6 +33,7 @@ scene.add(keyLight)
 
 const stlLoader = new STLLoader()
 const mfLoader = new ThreeMFLoader()
+const objLoader = new OBJLoader()
 
 function disposeMaterial(material: THREE.Material): void {
   for (const value of Object.values(material)) {
@@ -83,7 +85,8 @@ async function loadObject(job: ThumbnailJob): Promise<THREE.Object3D> {
     })
     return new THREE.Mesh(geometry, material)
   }
-  return mfLoader.loadAsync(url)
+  if (job.ext === '3mf') return mfLoader.loadAsync(url)
+  return objLoader.loadAsync(url)
 }
 
 async function handleJob(job: ThumbnailJob): Promise<void> {

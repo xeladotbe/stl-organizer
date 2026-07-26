@@ -5,7 +5,7 @@ import type { FileRow, ModelExt } from '../../shared/types'
 
 function extOf(path: string): ModelExt | null {
   const ext = extname(path).toLowerCase().slice(1)
-  return ext === 'stl' || ext === '3mf' ? ext : null
+  return ext === 'stl' || ext === '3mf' || ext === 'obj' ? ext : null
 }
 
 export function isModelFile(path: string): boolean {

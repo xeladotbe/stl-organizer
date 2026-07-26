@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import { STLLoader } from 'three/addons/loaders/STLLoader.js'
 import { ThreeMFLoader } from 'three/addons/loaders/3MFLoader.js'
+import { OBJLoader } from 'three/addons/loaders/OBJLoader.js'
 import type { ModelExt } from '@shared/types'
 
 // Typed as a plain postMessage/onmessage shape instead of the ambient `WorkerGlobalScope` lib —
@@ -30,6 +31,7 @@ export type ParseResponse =
 
 const stlLoader = new STLLoader()
 const mfLoader = new ThreeMFLoader()
+const objLoader = new OBJLoader()
 
 function materialColorOf(
   material: THREE.Material | THREE.Material[] | undefined
@@ -52,6 +54,18 @@ function extractPart(
   return { position, normal, color, materialColor }
 }
 
+/** Both ThreeMFLoader and OBJLoader return a multi-part `Object3D`/`Group` (one mesh per
+ * part/named object), unlike STLLoader which parses directly to a single geometry. */
+function extractPartsFromObject(object: THREE.Object3D): PartPayload[] {
+  const parts: PartPayload[] = []
+  object.traverse((child) => {
+    if (!(child as THREE.Mesh).isMesh) return
+    const mesh = child as THREE.Mesh
+    parts.push(extractPart(mesh.geometry, materialColorOf(mesh.material)))
+  })
+  return parts
+}
+
 ctx.onmessage = (event) => {
   const { requestId, url, ext } = event.data
 
@@ -59,18 +73,18 @@ ctx.onmessage = (event) => {
     try {
       const response = await fetch(url)
       if (!response.ok) throw new Error(`fetch failed with status ${response.status}`)
-      const buffer = await response.arrayBuffer()
 
-      const parts: PartPayload[] = []
+      let parts: PartPayload[]
       if (ext === 'stl') {
-        parts.push(extractPart(stlLoader.parse(buffer), null))
+        const buffer = await response.arrayBuffer()
+        parts = [extractPart(stlLoader.parse(buffer), null)]
+      } else if (ext === '3mf') {
+        const buffer = await response.arrayBuffer()
+        parts = extractPartsFromObject(mfLoader.parse(buffer))
       } else {
-        const object = mfLoader.parse(buffer)
-        object.traverse((child) => {
-          if (!(child as THREE.Mesh).isMesh) return
-          const mesh = child as THREE.Mesh
-          parts.push(extractPart(mesh.geometry, materialColorOf(mesh.material)))
-        })
+        // OBJLoader.parse takes text, unlike the binary formats above.
+        const text = await response.text()
+        parts = extractPartsFromObject(objLoader.parse(text))
       }
 
       if (parts.length === 0) throw new Error('no mesh data found')

@@ -67,14 +67,14 @@ function sortValue(item: DisplayItem, key: SortKey): string | number {
   }
 }
 
-// Every real row (a lone file, an expanded group's member, or a group header) is the same
-// height, so a flat, fixed-size list is all the virtualizer needs — expand/collapse just
-// changes which rows are in this array, which the virtualizer picks up via `count`.
+// Every real row (a lone file, a group member, or a group header) is the same height, so a
+// flat, fixed-size list is all the virtualizer needs. Groups always show their members - there's
+// no collapse - so this is a straight one-to-many expansion, not stateful.
 type VirtualRow =
   | { type: 'file'; file: FileRow; indent?: boolean }
   | { type: 'group'; group: ModelGroupRow; members: FileRow[] }
 
-function buildVirtualRows(items: DisplayItem[], expandedGroups: Set<number>): VirtualRow[] {
+function buildVirtualRows(items: DisplayItem[]): VirtualRow[] {
   const rows: VirtualRow[] = []
   for (const item of items) {
     if (item.type === 'file') {
@@ -82,9 +82,7 @@ function buildVirtualRows(items: DisplayItem[], expandedGroups: Set<number>): Vi
       continue
     }
     rows.push({ type: 'group', group: item.group, members: item.members })
-    if (expandedGroups.has(item.group.id)) {
-      for (const file of item.members) rows.push({ type: 'file', file, indent: true })
-    }
+    for (const file of item.members) rows.push({ type: 'file', file, indent: true })
   }
   return rows
 }
@@ -205,7 +203,6 @@ export function FileTable({ items }: { items: DisplayItem[] }): React.JSX.Elemen
   const theadRef = useRef<HTMLTableSectionElement>(null)
   const [widths, setWidths] = useState<Record<string, number>>(loadStoredWidths)
   const [sort, setSort] = useState<{ key: SortKey; direction: SortDirection } | null>(null)
-  const [expandedGroups, setExpandedGroups] = useState<Set<number>>(new Set())
   const [menu, setMenu] = useState<MenuAnchor | null>(null)
   const [groupDialogFor, setGroupDialogFor] = useState<number[] | null>(null)
   const [trashTarget, setTrashTarget] = useState<TrashTarget | null>(null)
@@ -240,10 +237,7 @@ export function FileTable({ items }: { items: DisplayItem[] }): React.JSX.Elemen
     })
   }, [items, sort])
 
-  const virtualRows = useMemo(
-    () => buildVirtualRows(sortedItems, expandedGroups),
-    [sortedItems, expandedGroups]
-  )
+  const virtualRows = useMemo(() => buildVirtualRows(sortedItems), [sortedItems])
 
   const orderedFileIds = useMemo(
     () => virtualRows.filter((row) => row.type === 'file').map((row) => row.file.id),
@@ -267,15 +261,6 @@ export function FileTable({ items }: { items: DisplayItem[] }): React.JSX.Elemen
     setSort((prev) => {
       if (!prev || prev.key !== key) return { key, direction: 'asc' }
       return { key, direction: prev.direction === 'asc' ? 'desc' : 'asc' }
-    })
-  }
-
-  const toggleExpanded = (groupId: number): void => {
-    setExpandedGroups((prev) => {
-      const next = new Set(prev)
-      if (next.has(groupId)) next.delete(groupId)
-      else next.add(groupId)
-      return next
     })
   }
 
@@ -460,7 +445,6 @@ export function FileTable({ items }: { items: DisplayItem[] }): React.JSX.Elemen
             }
 
             const { group, members } = row
-            const isExpanded = expandedGroups.has(group.id)
             const isSelected = selection?.type === 'group' && selection.id === group.id
             const thumbFile = members.find((m) => m.thumbnail_status === 'done')
             const totalSize = members.reduce((sum, file) => sum + file.size, 0)
@@ -484,16 +468,6 @@ export function FileTable({ items }: { items: DisplayItem[] }): React.JSX.Elemen
               >
                 <td className="overflow-hidden px-4 py-2 text-neutral-200">
                   <div className="flex items-center gap-2">
-                    <button
-                      onClick={(event) => {
-                        event.stopPropagation()
-                        toggleExpanded(group.id)
-                      }}
-                      className="w-3.5 shrink-0 text-neutral-500 hover:text-neutral-200"
-                      aria-label={isExpanded ? 'Collapse group' : 'Expand group'}
-                    >
-                      {isExpanded ? '▾' : '▸'}
-                    </button>
                     <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded bg-neutral-800">
                       {thumbFile ? (
                         <img

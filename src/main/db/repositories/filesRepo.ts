@@ -101,6 +101,13 @@ export function listFiles(filter: ListFilesFilter = {}): FileRow[] {
     .all(...params) as FileRow[]
 }
 
+/** Updates the row after an on-disk rename. Caller renames the file first; this just points the DB at the new location. */
+export function renameFile(id: number, newPath: string, newFilename: string): void {
+  getDb()
+    .prepare('UPDATE files SET path = ?, filename = ?, updated_at = ? WHERE id = ?')
+    .run(newPath, newFilename, Date.now(), id)
+}
+
 export function setCategory(fileId: number, categoryId: number | null): void {
   getDb()
     .prepare('UPDATE files SET category_id = ?, updated_at = ? WHERE id = ?')

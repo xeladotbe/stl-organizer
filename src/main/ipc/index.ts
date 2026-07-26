@@ -4,6 +4,8 @@ import { registerFileHandlers } from './filesIpc'
 import { registerDuplicateHandlers } from './duplicatesIpc'
 import { registerTagHandlers } from './tagsIpc'
 import { registerCategoryHandlers } from './categoriesIpc'
+import { registerModelGroupHandlers } from './modelGroupsIpc'
+import { registerAppHandlers } from './appIpc'
 import { appEvents } from '../appEvents'
 import type { ScanProgressEvent, FileChangedEvent } from '../../shared/types'
 
@@ -13,6 +15,8 @@ export function registerIpcHandlers(): void {
   registerDuplicateHandlers()
   registerTagHandlers()
   registerCategoryHandlers()
+  registerModelGroupHandlers()
+  registerAppHandlers()
 }
 
 /** Forwards main-process watcher/scanner/hashing events to the renderer as push events. */

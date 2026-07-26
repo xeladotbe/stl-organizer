@@ -8,7 +8,8 @@ import type {
   FileChangedEvent,
   TagRow,
   CategoryRow,
-  FileTagLink
+  FileTagLink,
+  ModelGroupRow
 } from '../shared/types'
 
 function subscribe<T>(channel: string, callback: (payload: T) => void): () => void {
@@ -33,10 +34,25 @@ const api = {
       ipcRenderer.invoke('files:setCategory', id, categoryId),
     setTags: (id: number, tagIds: number[]): Promise<void> =>
       ipcRenderer.invoke('files:setTags', id, tagIds),
+    rename: (id: number, newBaseName: string): Promise<void> =>
+      ipcRenderer.invoke('files:rename', id, newBaseName),
     setVisible: (fileIds: number[]): void => ipcRenderer.send('files:setVisible', fileIds)
   },
   duplicates: {
     list: (): Promise<FileRow[]> => ipcRenderer.invoke('duplicates:list')
+  },
+  groups: {
+    list: (): Promise<ModelGroupRow[]> => ipcRenderer.invoke('groups:list'),
+    create: (name: string, fileIds: number[]): Promise<ModelGroupRow> =>
+      ipcRenderer.invoke('groups:create', name, fileIds),
+    rename: (id: number, name: string): Promise<void> =>
+      ipcRenderer.invoke('groups:rename', id, name),
+    setCategory: (id: number, categoryId: number | null): Promise<void> =>
+      ipcRenderer.invoke('groups:setCategory', id, categoryId),
+    addFiles: (id: number, fileIds: number[]): Promise<void> =>
+      ipcRenderer.invoke('groups:addFiles', id, fileIds),
+    removeFile: (fileId: number): Promise<void> => ipcRenderer.invoke('groups:removeFile', fileId),
+    delete: (id: number): Promise<void> => ipcRenderer.invoke('groups:delete', id)
   },
   tags: {
     list: (): Promise<TagRow[]> => ipcRenderer.invoke('tags:list'),
@@ -56,6 +72,9 @@ const api = {
     rename: (id: number, name: string): Promise<void> =>
       ipcRenderer.invoke('categories:rename', id, name),
     delete: (id: number): Promise<void> => ipcRenderer.invoke('categories:delete', id)
+  },
+  app: {
+    openFoldersWindow: (): void => ipcRenderer.send('app:openFoldersWindow')
   },
   onScanProgress: (callback: (event: ScanProgressEvent) => void): (() => void) =>
     subscribe('scan:progress', callback),

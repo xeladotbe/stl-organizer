@@ -27,7 +27,8 @@ export default defineConfig({
       rollupOptions: {
         input: {
           index: resolve('src/renderer/index.html'),
-          thumbnail: resolve('src/renderer/thumbnail.html')
+          thumbnail: resolve('src/renderer/thumbnail.html'),
+          settings: resolve('src/renderer/settings.html')
         }
       }
     }

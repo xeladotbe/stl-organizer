@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(unset ELECTRON_RUN_AS_NODE)",
+      "Bash(npm run *)"
+    ]
+  }
+}

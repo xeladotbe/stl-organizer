@@ -5,10 +5,13 @@ import type {
   ScanProgressEvent,
   TagRow,
   CategoryRow,
-  FileTagLink
+  FileTagLink,
+  ModelGroupRow
 } from '@shared/types'
 
 export type LibraryView = 'all' | 'duplicates'
+
+export type Selection = { type: 'file'; id: number } | { type: 'group'; id: number } | null
 
 interface LibraryState {
   folders: WatchedFolderRow[]
@@ -17,37 +20,49 @@ interface LibraryState {
   duplicateIds: Set<number>
   tags: TagRow[]
   categories: CategoryRow[]
+  groups: ModelGroupRow[]
   fileTagIds: Map<number, number[]>
-  selectedFileId: number | null
+  selection: Selection
+  selectedFileIds: Set<number>
+  groupingMode: boolean
   scanProgress: Record<number, ScanProgressEvent>
   view: LibraryView
-  activeTagIds: number[]
-  activeCategoryId: number | null | undefined
   foldersLoading: boolean
   filesLoading: boolean
   duplicatesLoading: boolean
+  groupsLoading: boolean
   init: () => void
   loadFolders: () => Promise<void>
   loadFiles: () => Promise<void>
   loadDuplicates: () => Promise<void>
   loadTags: () => Promise<void>
   loadCategories: () => Promise<void>
+  loadGroups: () => Promise<void>
   loadFileTagLinks: () => Promise<void>
   addFolder: () => Promise<void>
   removeFolder: (id: number) => Promise<void>
   selectFile: (id: number | null) => void
+  selectGroup: (id: number) => void
+  toggleFileSelection: (id: number) => void
+  clearFileSelection: () => void
+  toggleGroupingMode: () => void
   setView: (view: LibraryView) => void
   moveToTrash: (id: number) => Promise<void>
-  createTag: (name: string) => Promise<void>
+  renameFile: (id: number, newBaseName: string) => Promise<void>
+  createTag: (name: string) => Promise<TagRow | undefined>
   renameTag: (id: number, name: string) => Promise<void>
   deleteTag: (id: number) => Promise<void>
-  createCategory: (name: string) => Promise<void>
+  createCategory: (name: string) => Promise<CategoryRow | undefined>
   renameCategory: (id: number, name: string) => Promise<void>
   deleteCategory: (id: number) => Promise<void>
   setFileTags: (fileId: number, tagIds: number[]) => Promise<void>
   setFileCategory: (fileId: number, categoryId: number | null) => Promise<void>
-  toggleTagFilter: (id: number) => void
-  setCategoryFilter: (id: number | null | undefined) => void
+  createGroup: (name: string, fileIds: number[]) => Promise<void>
+  renameGroup: (id: number, name: string) => Promise<void>
+  setGroupCategory: (id: number, categoryId: number | null) => Promise<void>
+  addFilesToGroup: (id: number, fileIds: number[]) => Promise<void>
+  removeFileFromGroup: (fileId: number) => Promise<void>
+  deleteGroup: (id: number) => Promise<void>
 }
 
 let initialized = false
@@ -70,15 +85,17 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   duplicateIds: new Set(),
   tags: [],
   categories: [],
+  groups: [],
   fileTagIds: new Map(),
-  selectedFileId: null,
+  selection: null,
+  selectedFileIds: new Set(),
+  groupingMode: false,
   scanProgress: {},
   view: 'all',
-  activeTagIds: [],
-  activeCategoryId: undefined,
   foldersLoading: false,
   filesLoading: false,
   duplicatesLoading: false,
+  groupsLoading: false,
 
   init: () => {
     if (initialized) return
@@ -89,6 +106,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
     void get().loadDuplicates()
     void get().loadTags()
     void get().loadCategories()
+    void get().loadGroups()
     void get().loadFileTagLinks()
 
     const scheduleRefetch = (): void => {
@@ -117,11 +135,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
 
   loadFiles: async () => {
     set({ filesLoading: true })
-    const { activeTagIds, activeCategoryId } = get()
-    const files = await window.api.files.list({
-      tagIds: activeTagIds.length > 0 ? activeTagIds : undefined,
-      categoryId: activeCategoryId
-    })
+    const files = await window.api.files.list()
     set({ files, filesLoading: false })
   },
 
@@ -145,6 +159,12 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
     set({ categories })
   },
 
+  loadGroups: async () => {
+    set({ groupsLoading: true })
+    const groups = await window.api.groups.list()
+    set({ groups, groupsLoading: false })
+  },
+
   loadFileTagLinks: async () => {
     const links = await window.api.tags.fileLinks()
     set({ fileTagIds: buildFileTagIds(links) })
@@ -162,7 +182,26 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
     await get().loadDuplicates()
   },
 
-  selectFile: (id) => set({ selectedFileId: id }),
+  selectFile: (id) => set({ selection: id == null ? null : { type: 'file', id } }),
+  selectGroup: (id) => set({ selection: { type: 'group', id } }),
+
+  toggleFileSelection: (id) => {
+    set((state) => {
+      const next = new Set(state.selectedFileIds)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return { selectedFileIds: next }
+    })
+  },
+  clearFileSelection: () => set({ selectedFileIds: new Set() }),
+
+  toggleGroupingMode: () => {
+    set((state) => ({
+      groupingMode: !state.groupingMode,
+      selectedFileIds: state.groupingMode ? new Set() : state.selectedFileIds
+    }))
+  },
+
   setView: (view) => set({ view }),
 
   moveToTrash: async (id) => {
@@ -171,10 +210,17 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
     await get().loadDuplicates()
   },
 
+  renameFile: async (id, newBaseName) => {
+    if (!newBaseName.trim()) return
+    await window.api.files.rename(id, newBaseName.trim())
+    await get().loadFiles()
+  },
+
   createTag: async (name) => {
-    if (!name.trim()) return
-    await window.api.tags.create(name)
+    if (!name.trim()) return undefined
+    const tag = await window.api.tags.create(name)
     await get().loadTags()
+    return tag
   },
 
   renameTag: async (id, name) => {
@@ -187,14 +233,13 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
     await window.api.tags.delete(id)
     await get().loadTags()
     await get().loadFileTagLinks()
-    set((state) => ({ activeTagIds: state.activeTagIds.filter((tagId) => tagId !== id) }))
-    await get().loadFiles()
   },
 
   createCategory: async (name) => {
-    if (!name.trim()) return
-    await window.api.categories.create(name)
+    if (!name.trim()) return undefined
+    const category = await window.api.categories.create(name)
     await get().loadCategories()
+    return category
   },
 
   renameCategory: async (id, name) => {
@@ -206,7 +251,6 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   deleteCategory: async (id) => {
     await window.api.categories.delete(id)
     await get().loadCategories()
-    if (get().activeCategoryId === id) set({ activeCategoryId: undefined })
     await get().loadFiles()
   },
 
@@ -220,17 +264,46 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
     await get().loadFiles()
   },
 
-  toggleTagFilter: (id) => {
-    set((state) => ({
-      activeTagIds: state.activeTagIds.includes(id)
-        ? state.activeTagIds.filter((tagId) => tagId !== id)
-        : [...state.activeTagIds, id]
-    }))
-    void get().loadFiles()
+  createGroup: async (name, fileIds) => {
+    if (!name.trim() || fileIds.length < 2) return
+    const group = await window.api.groups.create(name.trim(), fileIds)
+    get().clearFileSelection()
+    set({ selection: { type: 'group', id: group.id } })
+    await get().loadGroups()
+    await get().loadFiles()
   },
 
-  setCategoryFilter: (id) => {
-    set({ activeCategoryId: id })
-    void get().loadFiles()
+  renameGroup: async (id, name) => {
+    if (!name.trim()) return
+    await window.api.groups.rename(id, name.trim())
+    await get().loadGroups()
+  },
+
+  setGroupCategory: async (id, categoryId) => {
+    await window.api.groups.setCategory(id, categoryId)
+    await get().loadGroups()
+  },
+
+  addFilesToGroup: async (id, fileIds) => {
+    await window.api.groups.addFiles(id, fileIds)
+    get().clearFileSelection()
+    await get().loadGroups()
+    await get().loadFiles()
+  },
+
+  removeFileFromGroup: async (fileId) => {
+    await window.api.groups.removeFile(fileId)
+    set({ selection: { type: 'file', id: fileId } })
+    await get().loadGroups()
+    await get().loadFiles()
+  },
+
+  deleteGroup: async (id) => {
+    await window.api.groups.delete(id)
+    set((state) =>
+      state.selection?.type === 'group' && state.selection.id === id ? { selection: null } : {}
+    )
+    await get().loadGroups()
+    await get().loadFiles()
   }
 }))

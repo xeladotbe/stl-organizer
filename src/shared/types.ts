@@ -24,6 +24,7 @@ export interface FileRow {
   thumbnail_path: string | null
   thumbnail_status: ThumbnailStatus
   category_id: number | null
+  group_id: number | null
   missing: number
   created_at: number
   updated_at: number
@@ -35,6 +36,14 @@ export interface ListFilesFilter {
   includeMissing?: boolean
   tagIds?: number[]
   categoryId?: number | null
+}
+
+export interface ModelGroupRow {
+  id: number
+  name: string
+  category_id: number | null
+  created_at: number
+  updated_at: number
 }
 
 export interface TagRow {

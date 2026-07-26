@@ -55,5 +55,20 @@ export const migrations: Migration[] = [
         PRIMARY KEY (file_id, tag_id)
       );
     `
+  },
+  {
+    id: 2,
+    name: 'model_groups',
+    sql: `
+      CREATE TABLE model_groups (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        category_id INTEGER REFERENCES categories(id) ON DELETE SET NULL,
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL
+      );
+      ALTER TABLE files ADD COLUMN group_id INTEGER REFERENCES model_groups(id) ON DELETE SET NULL;
+      CREATE INDEX idx_files_group ON files(group_id);
+    `
   }
 ]

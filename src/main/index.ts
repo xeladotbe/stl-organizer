@@ -9,9 +9,13 @@ import { startWatching, stopAllWatching } from './watcher/watcherManager'
 import { registerIpcHandlers, forwardScanEventsTo } from './ipc'
 import { scheduleHashSweep } from './hashing/hashQueue'
 import { scheduleThumbnailSweep } from './thumbnails/thumbnailQueue'
-import { registerModelFileSchemePrivileges, registerModelFileProtocolHandler } from './protocol'
+import {
+  registerCustomSchemePrivileges,
+  registerModelFileProtocolHandler,
+  registerHdriFileProtocolHandler
+} from './protocol'
 
-registerModelFileSchemePrivileges()
+registerCustomSchemePrivileges()
 
 function createWindow(): void {
   // Create the browser window.
@@ -70,6 +74,7 @@ app.whenReady().then(() => {
   getDb()
   resetStuckProcessingStatuses()
   registerModelFileProtocolHandler()
+  registerHdriFileProtocolHandler()
   registerIpcHandlers()
   for (const folder of listFolders()) {
     if (folder.enabled) startWatching(folder)

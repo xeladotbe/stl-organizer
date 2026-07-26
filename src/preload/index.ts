@@ -74,7 +74,8 @@ const api = {
     delete: (id: number): Promise<void> => ipcRenderer.invoke('categories:delete', id)
   },
   app: {
-    openFoldersWindow: (): void => ipcRenderer.send('app:openFoldersWindow')
+    openFoldersWindow: (): void => ipcRenderer.send('app:openFoldersWindow'),
+    pickHdriFile: (): Promise<string | null> => ipcRenderer.invoke('app:pickHdriFile')
   },
   onScanProgress: (callback: (event: ScanProgressEvent) => void): (() => void) =>
     subscribe('scan:progress', callback),

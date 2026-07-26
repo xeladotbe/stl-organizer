@@ -1,8 +1,10 @@
-import { Component, useEffect, useMemo, type ReactNode } from 'react'
+import { Component, Suspense, useEffect, useMemo, type ReactNode } from 'react'
 import { Canvas } from '@react-three/fiber'
-import { Bounds, OrbitControls, useBounds } from '@react-three/drei'
+import { Bounds, Environment, OrbitControls, useBounds } from '@react-three/drei'
 import { modelFileUrl } from '@shared/modelFileUrl'
+import { hdriFileUrl } from '@shared/hdriFileUrl'
 import { useModelParts } from '../hooks/useModelParts'
+import { useLibraryStore } from '../store/useLibraryStore'
 import type { FileRow } from '@shared/types'
 
 function ParsedModel({ url, ext }: { url: string; ext: FileRow['ext'] }): React.JSX.Element | null {
@@ -70,21 +72,71 @@ function UnsupportedPlaceholder(): React.JSX.Element {
   )
 }
 
-export function ModelPreview({ file }: { file: FileRow }): React.JSX.Element {
-  const url = useMemo(() => modelFileUrl(file.id, file.filename), [file.id, file.filename])
+// Separate from ModelErrorBoundary: a bad/missing HDRI file should fall back to the default
+// lighting rig, not hide the whole model behind "Preview unavailable". Clearing `hdriPath` makes
+// ModelPreview re-render onto the default-lighting branch instead of retrying the same URL.
+class HdriErrorBoundary extends Component<{ children: ReactNode }, ErrorBoundaryState> {
+  state: ErrorBoundaryState = { hasError: false }
+
+  static getDerivedStateFromError(): ErrorBoundaryState {
+    return { hasError: true }
+  }
+
+  componentDidCatch(error: unknown): void {
+    console.error('[preview] failed to load HDRI, falling back to default lighting', error)
+    useLibraryStore.getState().clearHdri()
+  }
+
+  render(): ReactNode {
+    return this.state.hasError ? null : this.props.children
+  }
+}
+
+function HdriControls(): React.JSX.Element {
+  const hdriPath = useLibraryStore((state) => state.hdriPath)
+  const pickHdri = useLibraryStore((state) => state.pickHdri)
+  const clearHdri = useLibraryStore((state) => state.clearHdri)
 
   return (
-    <div className="h-64 w-full overflow-hidden rounded border border-neutral-800 bg-neutral-950">
+    <button
+      type="button"
+      onClick={() => void (hdriPath ? clearHdri() : pickHdri())}
+      title={hdriPath ?? 'Use an HDRI for lighting/reflections'}
+      className="absolute right-1 top-1 z-10 rounded bg-neutral-950/70 px-1.5 py-0.5 text-[10px] text-neutral-300 hover:text-neutral-100"
+    >
+      {hdriPath ? 'HDRI ✕' : 'HDRI…'}
+    </button>
+  )
+}
+
+export function ModelPreview({ file }: { file: FileRow }): React.JSX.Element {
+  const url = useMemo(() => modelFileUrl(file.id, file.filename), [file.id, file.filename])
+  const hdriPath = useLibraryStore((state) => state.hdriPath)
+  const hdriUrl = useMemo(() => (hdriPath ? hdriFileUrl(hdriPath) : null), [hdriPath])
+
+  return (
+    <div className="relative h-64 w-full overflow-hidden rounded border border-neutral-800 bg-neutral-950">
       <ModelErrorBoundary key={file.id} fallback={<UnsupportedPlaceholder />}>
         <Canvas camera={{ position: [40, 40, 40], fov: 45 }}>
-          <ambientLight intensity={0.6} />
-          <directionalLight position={[5, 8, 5]} intensity={0.8} />
+          {hdriUrl ? (
+            <HdriErrorBoundary key={hdriUrl}>
+              <Suspense fallback={null}>
+                <Environment files={hdriUrl} />
+              </Suspense>
+            </HdriErrorBoundary>
+          ) : (
+            <>
+              <ambientLight intensity={0.6} />
+              <directionalLight position={[5, 8, 5]} intensity={0.8} />
+            </>
+          )}
           <Bounds fit clip observe margin={1.3}>
             <ParsedModel key={url} url={url} ext={file.ext} />
           </Bounds>
           <OrbitControls makeDefault />
         </Canvas>
       </ModelErrorBoundary>
+      <HdriControls />
     </div>
   )
 }

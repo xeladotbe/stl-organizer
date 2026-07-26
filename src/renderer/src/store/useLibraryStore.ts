@@ -11,6 +11,10 @@ import type {
 
 export type LibraryView = 'all' | 'duplicates'
 
+// A display preference for the live 3D preview, not library data - kept in localStorage rather
+// than the SQLite DB (which has no settings/key-value table yet) so it survives app restarts.
+const HDRI_STORAGE_KEY = 'stl-organizer:hdriPath'
+
 export type Selection = { type: 'file'; id: number } | { type: 'group'; id: number } | null
 
 interface LibraryState {
@@ -27,6 +31,7 @@ interface LibraryState {
   selectionAnchorId: number | null
   scanProgress: Record<number, ScanProgressEvent>
   view: LibraryView
+  hdriPath: string | null
   foldersLoading: boolean
   filesLoading: boolean
   duplicatesLoading: boolean
@@ -48,6 +53,8 @@ interface LibraryState {
   selectFileRange: (orderedIds: number[], toId: number) => void
   clearFileSelection: () => void
   setView: (view: LibraryView) => void
+  pickHdri: () => Promise<void>
+  clearHdri: () => void
   moveToTrash: (id: number) => Promise<void>
   renameFile: (id: number, newBaseName: string) => Promise<void>
   createTag: (name: string) => Promise<TagRow | undefined>
@@ -93,6 +100,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   selectionAnchorId: null,
   scanProgress: {},
   view: 'all',
+  hdriPath: localStorage.getItem(HDRI_STORAGE_KEY),
   foldersLoading: false,
   filesLoading: false,
   duplicatesLoading: false,
@@ -227,6 +235,18 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   clearFileSelection: () => set({ selectedFileIds: new Set(), selectionAnchorId: null }),
 
   setView: (view) => set({ view }),
+
+  pickHdri: async () => {
+    const path = await window.api.app.pickHdriFile()
+    if (!path) return
+    localStorage.setItem(HDRI_STORAGE_KEY, path)
+    set({ hdriPath: path })
+  },
+
+  clearHdri: () => {
+    localStorage.removeItem(HDRI_STORAGE_KEY)
+    set({ hdriPath: null })
+  },
 
   moveToTrash: async (id) => {
     await window.api.files.moveToTrash(id)

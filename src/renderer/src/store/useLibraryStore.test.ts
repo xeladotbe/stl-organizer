@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { useLibraryStore } from './useLibraryStore'
 
 // Only the synchronous, DB/IPC-free selection actions are exercised here - anything that calls
@@ -119,5 +119,49 @@ describe('clearFileSelection', () => {
     expect(state.selectedFileIds).toEqual(new Set())
     expect(state.selectionAnchorId).toBeNull()
     expect(state.selection).toEqual({ type: 'file', id: 1 })
+  })
+})
+
+const HDRI_STORAGE_KEY = 'stl-organizer:hdriPath'
+
+describe('pickHdri / clearHdri', () => {
+  const originalApi = window.api
+
+  beforeEach(() => {
+    localStorage.removeItem(HDRI_STORAGE_KEY)
+    useLibraryStore.setState({ hdriPath: null })
+  })
+
+  afterEach(() => {
+    window.api = originalApi
+  })
+
+  it('stores the picked path in state and localStorage', async () => {
+    window.api = { app: { pickHdriFile: async () => 'C:\\hdris\\studio.hdr' } } as typeof window.api
+
+    await useLibraryStore.getState().pickHdri()
+
+    expect(useLibraryStore.getState().hdriPath).toBe('C:\\hdris\\studio.hdr')
+    expect(localStorage.getItem(HDRI_STORAGE_KEY)).toBe('C:\\hdris\\studio.hdr')
+  })
+
+  it('leaves the current HDRI untouched when the picker is canceled', async () => {
+    useLibraryStore.setState({ hdriPath: 'C:\\hdris\\existing.hdr' })
+    localStorage.setItem(HDRI_STORAGE_KEY, 'C:\\hdris\\existing.hdr')
+    window.api = { app: { pickHdriFile: async () => null } } as typeof window.api
+
+    await useLibraryStore.getState().pickHdri()
+
+    expect(useLibraryStore.getState().hdriPath).toBe('C:\\hdris\\existing.hdr')
+  })
+
+  it('clears the path from state and localStorage', () => {
+    useLibraryStore.setState({ hdriPath: 'C:\\hdris\\studio.hdr' })
+    localStorage.setItem(HDRI_STORAGE_KEY, 'C:\\hdris\\studio.hdr')
+
+    useLibraryStore.getState().clearHdri()
+
+    expect(useLibraryStore.getState().hdriPath).toBeNull()
+    expect(localStorage.getItem(HDRI_STORAGE_KEY)).toBeNull()
   })
 })

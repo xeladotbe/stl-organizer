@@ -2,7 +2,7 @@ import { useMemo, useRef, useEffect, useState } from 'react'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { useLibraryStore } from '../store/useLibraryStore'
 import { useVisibilityPriority } from '../hooks/useVisibilityPriority'
-import { formatSize } from '../lib/format'
+import { formatSize, formatDateTime } from '../lib/format'
 import { modelThumbnailUrl } from '@shared/modelFileUrl'
 import { ItemMenu, type MenuItem } from './ItemMenu'
 import { GroupNameDialog } from './GroupNameDialog'
@@ -35,7 +35,7 @@ const COLUMNS: ColumnDef[] = [
   { key: 'labels', label: 'Labels', defaultWidth: 200 },
   { key: 'type', label: 'Type', sortKey: 'ext', defaultWidth: 80 },
   { key: 'size', label: 'Size', sortKey: 'size', defaultWidth: 100 },
-  { key: 'modified', label: 'Modified', sortKey: 'mtime_ms', defaultWidth: 120 }
+  { key: 'modified', label: 'Modified', sortKey: 'mtime_ms', defaultWidth: 170 }
 ]
 
 const MIN_COLUMN_WIDTH = 60
@@ -176,7 +176,7 @@ function FileRowView({
       <td className="overflow-hidden px-4 py-2 uppercase text-neutral-500">{file.ext}</td>
       <td className="overflow-hidden px-4 py-2 text-neutral-400">{formatSize(file.size)}</td>
       <td className="overflow-hidden px-4 py-2 text-neutral-400">
-        {new Date(file.mtime_ms).toLocaleDateString()}
+        {formatDateTime(file.mtime_ms)}
       </td>
     </tr>
   )
@@ -499,7 +499,7 @@ export function FileTable({ items }: { items: DisplayItem[] }): React.JSX.Elemen
                   {formatSize(totalSize)}
                 </td>
                 <td className="overflow-hidden px-4 py-2 text-neutral-400">
-                  {new Date(Math.max(...members.map((m) => m.mtime_ms))).toLocaleDateString()}
+                  {formatDateTime(Math.max(...members.map((m) => m.mtime_ms)))}
                 </td>
               </tr>
             )

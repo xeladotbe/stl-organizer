@@ -43,6 +43,7 @@ jobs:
             dist/*.exe
             dist/*.dmg
             dist/*.zip
+          body_path: CHANGELOG.md
           draft: false
           fail_on_unmatched_files: false
         env:

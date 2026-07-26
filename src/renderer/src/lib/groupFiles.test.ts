@@ -65,4 +65,22 @@ describe('toDisplayItems', () => {
 
     expect(items).toEqual([{ type: 'file', file: orphan }])
   })
+
+  it('places a group at the position of its first member instead of trailing at the end', () => {
+    const group = makeGroup({ id: 10, name: 'Vase' })
+    const lone1 = makeFile({ id: 1 })
+    const memberA = makeFile({ id: 2, group_id: 10 })
+    const lone2 = makeFile({ id: 3 })
+    const memberB = makeFile({ id: 4, group_id: 10 })
+    const lone3 = makeFile({ id: 5 })
+
+    const items = toDisplayItems([lone1, memberA, lone2, memberB, lone3], [group])
+
+    expect(items).toEqual([
+      { type: 'file', file: lone1 },
+      { type: 'group', group, members: [memberA, memberB] },
+      { type: 'file', file: lone2 },
+      { type: 'file', file: lone3 }
+    ])
+  })
 })

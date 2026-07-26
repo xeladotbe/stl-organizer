@@ -190,6 +190,7 @@ interface MenuAnchor {
 export function FileGrid({ items }: { items: DisplayItem[] }): React.JSX.Element {
   const selection = useLibraryStore((state) => state.selection)
   const selectFile = useLibraryStore((state) => state.selectFile)
+  const collapseSelectionTo = useLibraryStore((state) => state.collapseSelectionTo)
   const selectGroup = useLibraryStore((state) => state.selectGroup)
   const toggleFileSelection = useLibraryStore((state) => state.toggleFileSelection)
   const selectFileRange = useLibraryStore((state) => state.selectFileRange)
@@ -262,8 +263,9 @@ export function FileGrid({ items }: { items: DisplayItem[] }): React.JSX.Element
   const openFileMenu = (event: React.MouseEvent, file: FileRow): void => {
     if (!selectedFileIds.has(file.id)) {
       // Opening the menu (right-click or the ⋮ button) outside the current selection collapses
-      // it to just this file, matching standard file-explorer behavior.
-      selectFile(file.id)
+      // it to just this file, matching standard file-explorer behavior - but must not open the
+      // detail pane, so this goes through collapseSelectionTo rather than selectFile.
+      collapseSelectionTo(file.id)
     }
     openMenuAt(event, { type: 'file', file })
   }

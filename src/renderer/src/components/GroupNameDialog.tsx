@@ -13,7 +13,7 @@ export function GroupNameDialog({
   const [name, setName] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
 
-  const submit = (): void => onConfirm(name.trim() || 'New model')
+  const submit = (): void => onConfirm(name.trim() || 'New virtual file')
 
   return (
     <Dialog.Root open onOpenChange={(open) => !open && onCancel()}>
@@ -28,14 +28,14 @@ export function GroupNameDialog({
           }}
         >
           <Dialog.Title className="mb-3 text-sm font-semibold text-neutral-200">
-            Group {count} files into a model
+            Group {count} files into a virtual file
           </Dialog.Title>
           <input
             ref={inputRef}
             value={name}
             onChange={(event) => setName(event.target.value)}
             onKeyDown={(event) => event.key === 'Enter' && submit()}
-            placeholder="Model name…"
+            placeholder="Virtual file name…"
             className="w-full rounded border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-sm text-neutral-100 placeholder:text-neutral-600 focus:border-neutral-500 focus:outline-none"
           />
           <div className="mt-3 flex justify-end gap-2 text-sm">

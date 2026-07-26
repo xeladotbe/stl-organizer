@@ -4,6 +4,7 @@ import { useLibraryStore } from '../store/useLibraryStore'
 import { FileTable } from './FileTable'
 import { FileGrid } from './FileGrid'
 import { toDisplayItems } from '../lib/groupFiles'
+import { parseSearchQuery } from '../lib/searchQuery'
 
 type DisplayMode = 'list' | 'grid'
 
@@ -12,25 +13,6 @@ const DISPLAY_MODE_STORAGE_KEY = 'stl-organizer:displayMode'
 function loadStoredDisplayMode(): DisplayMode {
   const stored = localStorage.getItem(DISPLAY_MODE_STORAGE_KEY)
   return stored === 'grid' ? 'grid' : 'list'
-}
-
-/** Splits a search query into plain filename/group-name tokens, `tag:name` and `category:name` tokens. */
-function parseSearchQuery(query: string): {
-  textTokens: string[]
-  tagTokens: string[]
-  categoryTokens: string[]
-} {
-  const textTokens: string[] = []
-  const tagTokens: string[] = []
-  const categoryTokens: string[] = []
-  for (const token of query.trim().split(/\s+/).filter(Boolean)) {
-    const tagMatch = /^tag:(.+)$/i.exec(token)
-    const categoryMatch = /^category:(.+)$/i.exec(token)
-    if (tagMatch) tagTokens.push(tagMatch[1].toLowerCase())
-    else if (categoryMatch) categoryTokens.push(categoryMatch[1].toLowerCase())
-    else textTokens.push(token.toLowerCase())
-  }
-  return { textTokens, tagTokens, categoryTokens }
 }
 
 export function FileList(): React.JSX.Element {
@@ -50,8 +32,13 @@ export function FileList(): React.JSX.Element {
   const groupById = useMemo(() => new Map(groups.map((group) => [group.id, group])), [groups])
 
   const visibleFiles = useMemo(() => {
-    const { textTokens, tagTokens, categoryTokens } = parseSearchQuery(search)
-    if (textTokens.length === 0 && tagTokens.length === 0 && categoryTokens.length === 0) {
+    const { textTokens, tagTokens, categoryTokens, typeTokens } = parseSearchQuery(search)
+    if (
+      textTokens.length === 0 &&
+      tagTokens.length === 0 &&
+      categoryTokens.length === 0 &&
+      typeTokens.length === 0
+    ) {
       return files
     }
 
@@ -97,6 +84,14 @@ export function FileList(): React.JSX.Element {
         if (!matchesTags) return false
       }
 
+      if (typeTokens.length > 0) {
+        const isGrouped = group != null
+        const matchesType = typeTokens.every((token) =>
+          token === 'virtual' ? isGrouped : file.ext.toLowerCase() === token
+        )
+        if (!matchesType) return false
+      }
+
       return true
     })
   }, [files, search, tags, categories, fileTagIds, groupById])
@@ -110,7 +105,7 @@ export function FileList(): React.JSX.Element {
           <input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search files… (tag:name, category:name)"
+            placeholder="Search files… (tag:name, category:name, type:virtual|stl|3mf)"
             className="w-full max-w-sm rounded border border-neutral-700 bg-neutral-900 px-3 py-1.5 text-sm text-neutral-100 placeholder:text-neutral-500 focus:border-neutral-500 focus:outline-none"
           />
           <ToggleGroup.Root

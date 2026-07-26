@@ -105,7 +105,7 @@ export function FileList(): React.JSX.Element {
           <input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search files… (tag:name, category:name, type:virtual|stl|3mf)"
+            placeholder="Search files… (tag:name, category:name, type:virtual|stl|3mf|obj)"
             className="w-full max-w-sm rounded border border-neutral-700 bg-neutral-900 px-3 py-1.5 text-sm text-neutral-100 placeholder:text-neutral-500 focus:border-neutral-500 focus:outline-none"
           />
           <ToggleGroup.Root

@@ -48,7 +48,7 @@ export function SettingsApp(): React.JSX.Element {
           <li className="px-2 py-4 text-xs text-neutral-500">Loading…</li>
         ) : folders.length === 0 ? (
           <li className="px-2 py-4 text-xs text-neutral-500">
-            No folders yet. Add a folder to start indexing your STL/3MF files.
+            No folders yet. Add a folder to start indexing your STL/3MF/OBJ files.
           </li>
         ) : (
           folders.map((folder) => (

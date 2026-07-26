@@ -5,7 +5,7 @@ import type { ModelExt, ThumbnailJob } from '../../shared/types'
 
 const DEBUG_CONSOLE = is.dev
 
-// Some real-world STL/3MF files run to hundreds of MB; parsing that much geometry
+// Some real-world STL/3MF/OBJ files run to hundreds of MB; parsing that much geometry
 // (unzip + XML for 3MF especially) can legitimately take a while in the background.
 const JOB_TIMEOUT_MS = 90000
 

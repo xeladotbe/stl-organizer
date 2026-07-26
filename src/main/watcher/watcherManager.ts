@@ -5,7 +5,7 @@ import { scanFile, removeFile } from '../scanning/scanner'
 import { appEvents } from '../appEvents'
 import { scheduleHashSweep } from '../hashing/hashQueue'
 
-const MODEL_EXTENSIONS = new Set(['.stl', '.3mf'])
+const MODEL_EXTENSIONS = new Set(['.stl', '.3mf', '.obj'])
 const IGNORED_DIR_PATTERN =
   /[\\/](node_modules|\.git|\$RECYCLE\.BIN|System Volume Information)[\\/]/i
 

@@ -31,6 +31,7 @@
     "@tanstack/react-virtual": "^3.14.8",
     "better-sqlite3": "^13.0.1",
     "chokidar": "^5.0.0",
+    "picomatch": "^4.0.5",
     "radix-ui": "^1.6.7",
     "three": "^0.185.1",
     "zustand": "^5.0.14"
@@ -42,6 +43,7 @@
     "@tailwindcss/vite": "^4.3.3",
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^22.19.1",
+    "@types/picomatch": "^4.0.3",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
     "@types/three": "^0.185.1",

@@ -213,7 +213,7 @@ export function DetailPane(): React.JSX.Element | null {
       <>
         <aside className="flex w-80 shrink-0 flex-col overflow-y-auto border-l border-neutral-800 bg-neutral-900 p-3">
           <div className="mb-2 flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase text-neutral-500">Model</span>
+            <span className="text-xs font-semibold uppercase text-neutral-500">Virtual</span>
             <button
               onClick={() => selectFile(null)}
               aria-label="Close preview"
@@ -246,7 +246,7 @@ export function DetailPane(): React.JSX.Element | null {
 
           <div className="mt-4">
             <label className="mb-1 block text-xs font-semibold uppercase text-neutral-500">
-              Files in this model
+              Files in this virtual file
             </label>
             <ul className="space-y-1">
               {members.map((file) => (
@@ -348,7 +348,7 @@ export function DetailPane(): React.JSX.Element | null {
 
       <div className="mt-4">
         <label className="mb-1 block text-xs font-semibold uppercase text-neutral-500">
-          Model group
+          Virtual file
         </label>
         {memberGroup ? (
           <div className="flex items-center justify-between gap-2 text-sm">
@@ -368,12 +368,12 @@ export function DetailPane(): React.JSX.Element | null {
           </div>
         ) : groups.length === 0 ? (
           <span className="text-xs text-neutral-500">
-            No models yet — select 2+ files in the list to create one.
+            No virtual files yet — select 2+ files in the list to create one.
           </span>
         ) : (
           <SelectField
             value={null}
-            placeholder="Add to existing model…"
+            placeholder="Add to existing virtual file…"
             options={groups.map((group) => ({ value: String(group.id), label: group.name }))}
             onChange={(next) => {
               if (next) void addFilesToGroup(Number(next), [file.id])

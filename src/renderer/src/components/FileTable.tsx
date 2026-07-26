@@ -494,7 +494,7 @@ export function FileTable({ items }: { items: DisplayItem[] }): React.JSX.Elemen
                     isDuplicate={groupHasDuplicate}
                   />
                 </td>
-                <td className="overflow-hidden px-4 py-2 uppercase text-neutral-500">model</td>
+                <td className="overflow-hidden px-4 py-2 uppercase text-neutral-500">virtual</td>
                 <td className="overflow-hidden px-4 py-2 text-neutral-400">
                   {formatSize(totalSize)}
                 </td>

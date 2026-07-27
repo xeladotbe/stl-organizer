@@ -1,4 +1,4 @@
-import { Component, Suspense, useEffect, useMemo, type ReactNode } from 'react';
+import { Component, Suspense, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { Bounds, Environment, OrbitControls, useBounds } from '@react-three/drei';
 import { modelFileUrl } from '@shared/modelFileUrl';
@@ -43,6 +43,10 @@ function ParsedModel({ url, ext }: { url: string; ext: FileRow['ext'] }): React.
 interface ErrorBoundaryProps {
   children: ReactNode;
   fallback: ReactNode;
+  // Fires synchronously from componentDidCatch, in addition to (not instead of) the boundary's own
+  // hasError state — lets ModelPreview surface a DOM "Preview unavailable" overlay *outside* the
+  // Canvas without needing the whole Canvas/Environment subtree to unmount just to render it.
+  onError?: () => void;
 }
 
 interface ErrorBoundaryState {
@@ -58,6 +62,7 @@ class ModelErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryStat
 
   componentDidCatch(error: unknown): void {
     console.error('[preview] failed to load model', error);
+    this.props.onError?.();
   }
 
   render(): ReactNode {
@@ -121,6 +126,12 @@ export function ModelPreview({
   const hdriPath = useLibraryStore((state) => state.hdriPath);
   const hdriUrl = useMemo(() => (hdriPath ? hdriFileUrl(hdriPath) : null), [hdriPath]);
 
+  // Tracks *which* file last failed to parse, rather than a plain boolean — comparing it against
+  // the current `file.id` below derives a fresh "no error yet" state for free on every file switch,
+  // with no separate reset effect needed (see rerender-derived-state-no-effect).
+  const [erroredFileId, setErroredFileId] = useState<number | null>(null);
+  const hasModelError = erroredFileId === file.id;
+
   const previewHeight = calculatePreviewHeight(width);
 
   return (
@@ -128,26 +139,39 @@ export function ModelPreview({
       className="relative overflow-hidden rounded border border-neutral-800 bg-neutral-950"
       style={{ width: '100%', height: previewHeight }}
     >
-      <ModelErrorBoundary key={file.id} fallback={<UnsupportedPlaceholder />}>
-        <Canvas camera={{ position: [40, 40, 40], fov: 45 }}>
-          {hdriUrl ? (
-            <HdriErrorBoundary key={hdriUrl}>
-              <Suspense fallback={null}>
-                <Environment files={hdriUrl} />
-              </Suspense>
-            </HdriErrorBoundary>
-          ) : (
-            <>
-              <ambientLight intensity={0.6} />
-              <directionalLight position={[5, 8, 5]} intensity={0.8} />
-            </>
-          )}
-          <Bounds fit clip observe margin={1.3}>
-            <ParsedModel key={url} url={url} ext={file.ext} />
-          </Bounds>
-          <OrbitControls makeDefault />
-        </Canvas>
-      </ModelErrorBoundary>
+      {/* No `key={file.id}` on the Canvas itself (there used to be one, via the error boundary that
+          wrapped it) — remounting the whole Canvas per file switch also tore down <Environment>,
+          discarding its PMREM-generated HDRI texture (tied to that specific WebGLRenderer) and
+          forcing a full re-fetch + re-decode of the HDRI on every single file switch. Keeping the
+          Canvas/renderer/Environment alive across switches and only remounting the part that
+          actually needs a per-file reset (ParsedModel, keyed by `url` below) fixes that. */}
+      <Canvas camera={{ position: [40, 40, 40], fov: 45 }}>
+        {hdriUrl ? (
+          <HdriErrorBoundary key={hdriUrl}>
+            <Suspense fallback={null}>
+              <Environment files={hdriUrl} />
+            </Suspense>
+          </HdriErrorBoundary>
+        ) : (
+          <>
+            <ambientLight intensity={0.6} />
+            <directionalLight position={[5, 8, 5]} intensity={0.8} />
+          </>
+        )}
+        <Bounds fit clip observe margin={1.3}>
+          {/* `fallback={null}`: a DOM node can't be a child of <Canvas>. The actual "Preview
+              unavailable" message renders as a plain DOM overlay below, outside the Canvas. */}
+          <ModelErrorBoundary key={url} fallback={null} onError={() => setErroredFileId(file.id)}>
+            <ParsedModel url={url} ext={file.ext} />
+          </ModelErrorBoundary>
+        </Bounds>
+        <OrbitControls makeDefault />
+      </Canvas>
+      {hasModelError && (
+        <div className="absolute inset-0 bg-neutral-950">
+          <UnsupportedPlaceholder />
+        </div>
+      )}
       <HdriControls />
     </div>
   );

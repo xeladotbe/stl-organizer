@@ -22,8 +22,9 @@ export function suppressKnownConsoleWarnings(): void {
     const message = String(args[0] ?? '');
 
     // Suppress THREE.Clock deprecation warning from @react-three/fiber
-    // Pattern: "Clock: This module has been deprecated. Please use THREE.Timer instead."
-    if (message.includes('Clock: This module has been deprecated')) {
+    // Pattern: "THREE.Clock: This module has been deprecated. Please use THREE.Timer instead."
+    // Emitted by three.js whenever Clock() constructor is called (r183+)
+    if (message.includes('THREE.Clock: This module has been deprecated')) {
       return;
     }
 

@@ -101,6 +101,27 @@ export function listFiles(filter: ListFilesFilter = {}): FileRow[] {
     .all(...params) as FileRow[]
 }
 
+/**
+ * Files in the same watched folder whose mtime falls within `windowMs` of `mtimeMs` - a cheap
+ * SQL pre-filter for auto-grouping (see autoGroup.ts). folder_id only narrows to the watched
+ * folder's root, which can contain many subfolders, so callers still need to check the results
+ * actually share the same directory.
+ */
+export function findFilesNearMtime(
+  folderId: number,
+  mtimeMs: number,
+  windowMs: number,
+  excludeId: number
+): FileRow[] {
+  return getDb()
+    .prepare(
+      `SELECT * FROM files
+       WHERE folder_id = ? AND missing = 0 AND id != ?
+         AND mtime_ms BETWEEN ? AND ?`
+    )
+    .all(folderId, excludeId, mtimeMs - windowMs, mtimeMs + windowMs) as FileRow[]
+}
+
 /** Updates the row after an on-disk rename. Caller renames the file first; this just points the DB at the new location. */
 export function renameFile(id: number, newPath: string, newFilename: string): void {
   getDb()

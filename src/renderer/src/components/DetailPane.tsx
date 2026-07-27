@@ -1,11 +1,11 @@
-import { useState } from 'react'
-import { useLibraryStore } from '../store/useLibraryStore'
-import { ModelPreview } from './ModelPreview'
-import { ConfirmDialog } from './ConfirmDialog'
-import { ChipComboBox } from './ChipComboBox'
-import { SelectField } from './SelectField'
-import { formatSize } from '../lib/format'
-import type { CategoryRow, FileRow, TagRow } from '@shared/types'
+import { useState } from 'react';
+import { useLibraryStore } from '../store/useLibraryStore';
+import { ModelPreview } from './ModelPreview';
+import { ConfirmDialog } from './ConfirmDialog';
+import { ChipComboBox } from './ChipComboBox';
+import { SelectField } from './SelectField';
+import { formatSize } from '../lib/format';
+import type { CategoryRow, FileRow, TagRow } from '@shared/types';
 
 /**
  * `key`-ed by the caller on the underlying id + value, so an external rename (or switching to a
@@ -17,12 +17,12 @@ function InlineRename({
   suffix,
   onCommit
 }: {
-  value: string
-  suffix?: string
-  onCommit: (newValue: string) => void
+  value: string;
+  suffix?: string;
+  onCommit: (newValue: string) => void;
 }): React.JSX.Element {
-  const [editing, setEditing] = useState(false)
-  const [draft, setDraft] = useState(value)
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(value);
 
   if (!editing) {
     return (
@@ -39,15 +39,15 @@ function InlineRename({
           ✏️
         </button>
       </div>
-    )
+    );
   }
 
   const commit = (): void => {
-    setEditing(false)
-    const trimmed = draft.trim()
-    if (trimmed && trimmed !== value) onCommit(trimmed)
-    else setDraft(value)
-  }
+    setEditing(false);
+    const trimmed = draft.trim();
+    if (trimmed && trimmed !== value) onCommit(trimmed);
+    else setDraft(value);
+  };
 
   return (
     <div className="flex items-center gap-1.5">
@@ -57,17 +57,17 @@ function InlineRename({
         onChange={(event) => setDraft(event.target.value)}
         onBlur={commit}
         onKeyDown={(event) => {
-          if (event.key === 'Enter') commit()
+          if (event.key === 'Enter') commit();
           if (event.key === 'Escape') {
-            setDraft(value)
-            setEditing(false)
+            setDraft(value);
+            setEditing(false);
           }
         }}
         className="min-w-0 flex-1 rounded border border-neutral-700 bg-neutral-950 px-1.5 py-0.5 text-sm text-neutral-100 focus:border-neutral-500 focus:outline-none"
       />
       {suffix && <span className="shrink-0 text-xs text-neutral-500">{suffix}</span>}
     </div>
-  )
+  );
 }
 
 function CategoryPicker({
@@ -77,21 +77,21 @@ function CategoryPicker({
   onCreate,
   onFilterByCategory
 }: {
-  categories: CategoryRow[]
-  value: number | null
-  onChange: (id: number | null) => void
-  onCreate: (name: string) => Promise<CategoryRow | undefined>
-  onFilterByCategory: (name: string) => void
+  categories: CategoryRow[];
+  value: number | null;
+  onChange: (id: number | null) => void;
+  onCreate: (name: string) => Promise<CategoryRow | undefined>;
+  onFilterByCategory: (name: string) => void;
 }): React.JSX.Element {
-  const current = value != null ? categories.find((category) => category.id === value) : undefined
-  const suggestions = categories.filter((category) => category.id !== value)
+  const current = value != null ? categories.find((category) => category.id === value) : undefined;
+  const suggestions = categories.filter((category) => category.id !== value);
 
   const handleCreate = (name: string): void => {
     void (async (): Promise<void> => {
-      const created = await onCreate(name)
-      if (created) onChange(created.id)
-    })()
-  }
+      const created = await onCreate(name);
+      if (created) onChange(created.id);
+    })();
+  };
 
   return (
     <ChipComboBox
@@ -104,7 +104,7 @@ function CategoryPicker({
       onCreateNew={handleCreate}
       onChipClick={() => current && onFilterByCategory(current.name)}
     />
-  )
+  );
 }
 
 function TagPicker({
@@ -114,24 +114,26 @@ function TagPicker({
   onCreate,
   onFilterByTag
 }: {
-  tags: TagRow[]
-  assignedIds: number[]
-  onToggle: (id: number) => void
-  onCreate: (name: string) => Promise<TagRow | undefined>
-  onFilterByTag: (name: string) => void
+  tags: TagRow[];
+  assignedIds: number[];
+  onToggle: (id: number) => void;
+  onCreate: (name: string) => Promise<TagRow | undefined>;
+  onFilterByTag: (name: string) => void;
 }): React.JSX.Element {
   // Chips follow `assignedIds`' own order (how the tags were actually added to this file), not
   // `tags`' alphabetical order - filtering the alphabetical list would re-sort the chips instead.
-  const tagById = new Map(tags.map((tag) => [tag.id, tag]))
-  const assigned = assignedIds.map((id) => tagById.get(id)).filter((tag): tag is TagRow => tag != null)
-  const suggestions = tags.filter((tag) => !assignedIds.includes(tag.id))
+  const tagById = new Map(tags.map((tag) => [tag.id, tag]));
+  const assigned = assignedIds
+    .map((id) => tagById.get(id))
+    .filter((tag): tag is TagRow => tag != null);
+  const suggestions = tags.filter((tag) => !assignedIds.includes(tag.id));
 
   const handleCreate = (name: string): void => {
     void (async (): Promise<void> => {
-      const created = await onCreate(name)
-      if (created && !assignedIds.includes(created.id)) onToggle(created.id)
-    })()
-  }
+      const created = await onCreate(name);
+      if (created && !assignedIds.includes(created.id)) onToggle(created.id);
+    })();
+  };
 
   return (
     <ChipComboBox
@@ -143,47 +145,47 @@ function TagPicker({
       onSelectExisting={onToggle}
       onCreateNew={handleCreate}
       onChipClick={(id) => {
-        const tag = tagById.get(id)
-        if (tag) onFilterByTag(tag.name)
+        const tag = tagById.get(id);
+        if (tag) onFilterByTag(tag.name);
       }}
     />
-  )
+  );
 }
 
 export function DetailPane(): React.JSX.Element | null {
-  const selection = useLibraryStore((state) => state.selection)
-  const files = useLibraryStore((state) => state.files)
-  const duplicates = useLibraryStore((state) => state.duplicates)
-  const groups = useLibraryStore((state) => state.groups)
-  const categories = useLibraryStore((state) => state.categories)
-  const tags = useLibraryStore((state) => state.tags)
-  const fileTagIds = useLibraryStore((state) => state.fileTagIds)
-  const selectFile = useLibraryStore((state) => state.selectFile)
-  const selectGroup = useLibraryStore((state) => state.selectGroup)
-  const setFileTags = useLibraryStore((state) => state.setFileTags)
-  const setFileCategory = useLibraryStore((state) => state.setFileCategory)
-  const renameFile = useLibraryStore((state) => state.renameFile)
-  const renameGroup = useLibraryStore((state) => state.renameGroup)
-  const setGroupCategory = useLibraryStore((state) => state.setGroupCategory)
-  const addFilesToGroup = useLibraryStore((state) => state.addFilesToGroup)
-  const removeFileFromGroup = useLibraryStore((state) => state.removeFileFromGroup)
-  const deleteGroup = useLibraryStore((state) => state.deleteGroup)
-  const moveToTrash = useLibraryStore((state) => state.moveToTrash)
-  const createTag = useLibraryStore((state) => state.createTag)
-  const createCategory = useLibraryStore((state) => state.createCategory)
-  const addSearchToken = useLibraryStore((state) => state.addSearchToken)
+  const selection = useLibraryStore((state) => state.selection);
+  const files = useLibraryStore((state) => state.files);
+  const duplicates = useLibraryStore((state) => state.duplicates);
+  const groups = useLibraryStore((state) => state.groups);
+  const categories = useLibraryStore((state) => state.categories);
+  const tags = useLibraryStore((state) => state.tags);
+  const fileTagIds = useLibraryStore((state) => state.fileTagIds);
+  const selectFile = useLibraryStore((state) => state.selectFile);
+  const selectGroup = useLibraryStore((state) => state.selectGroup);
+  const setFileTags = useLibraryStore((state) => state.setFileTags);
+  const setFileCategory = useLibraryStore((state) => state.setFileCategory);
+  const renameFile = useLibraryStore((state) => state.renameFile);
+  const renameGroup = useLibraryStore((state) => state.renameGroup);
+  const setGroupCategory = useLibraryStore((state) => state.setGroupCategory);
+  const addFilesToGroup = useLibraryStore((state) => state.addFilesToGroup);
+  const removeFileFromGroup = useLibraryStore((state) => state.removeFileFromGroup);
+  const deleteGroup = useLibraryStore((state) => state.deleteGroup);
+  const moveToTrash = useLibraryStore((state) => state.moveToTrash);
+  const createTag = useLibraryStore((state) => state.createTag);
+  const createCategory = useLibraryStore((state) => state.createCategory);
+  const addSearchToken = useLibraryStore((state) => state.addSearchToken);
 
-  const [trashTarget, setTrashTarget] = useState<FileRow | null>(null)
+  const [trashTarget, setTrashTarget] = useState<FileRow | null>(null);
 
-  const filterByTag = (name: string): void => addSearchToken(`tag:${name}`)
-  const filterByCategory = (name: string): void => addSearchToken(`category:${name}`)
+  const filterByTag = (name: string): void => addSearchToken(`tag:${name}`);
+  const filterByCategory = (name: string): void => addSearchToken(`category:${name}`);
 
-  if (!selection) return null
+  if (!selection) return null;
 
   if (selection.type === 'group') {
-    const group = groups.find((g) => g.id === selection.id)
-    if (!group) return null
-    const members = files.filter((f) => f.group_id === group.id)
+    const group = groups.find((g) => g.id === selection.id);
+    if (!group) return null;
+    const members = files.filter((f) => f.group_id === group.id);
 
     return (
       <>
@@ -271,29 +273,30 @@ export function DetailPane(): React.JSX.Element | null {
             danger
             onCancel={() => setTrashTarget(null)}
             onConfirm={() => {
-              void moveToTrash(trashTarget.id)
-              setTrashTarget(null)
+              void moveToTrash(trashTarget.id);
+              setTrashTarget(null);
             }}
           />
         )}
       </>
-    )
+    );
   }
 
   const file =
-    files.find((f) => f.id === selection.id) ?? duplicates.find((f) => f.id === selection.id)
-  if (!file) return null
+    files.find((f) => f.id === selection.id) ?? duplicates.find((f) => f.id === selection.id);
+  if (!file) return null;
 
-  const assignedTagIds = fileTagIds.get(file.id) ?? []
-  const memberGroup = file.group_id != null ? groups.find((g) => g.id === file.group_id) : undefined
-  const baseName = file.filename.slice(0, file.filename.length - file.ext.length - 1)
+  const assignedTagIds = fileTagIds.get(file.id) ?? [];
+  const memberGroup =
+    file.group_id != null ? groups.find((g) => g.id === file.group_id) : undefined;
+  const baseName = file.filename.slice(0, file.filename.length - file.ext.length - 1);
 
   const toggleTag = (tagId: number): void => {
     const next = assignedTagIds.includes(tagId)
       ? assignedTagIds.filter((id) => id !== tagId)
-      : [...assignedTagIds, tagId]
-    void setFileTags(file.id, next)
-  }
+      : [...assignedTagIds, tagId];
+    void setFileTags(file.id, next);
+  };
 
   return (
     <aside className="flex w-80 shrink-0 flex-col overflow-y-auto border-l border-neutral-800 bg-neutral-900 p-3">
@@ -353,7 +356,7 @@ export function DetailPane(): React.JSX.Element | null {
             placeholder="Add to existing virtual file…"
             options={groups.map((group) => ({ value: String(group.id), label: group.name }))}
             onChange={(next) => {
-              if (next) void addFilesToGroup(Number(next), [file.id])
+              if (next) void addFilesToGroup(Number(next), [file.id]);
             }}
           />
         )}
@@ -383,5 +386,5 @@ export function DetailPane(): React.JSX.Element | null {
         />
       </div>
     </aside>
-  )
+  );
 }

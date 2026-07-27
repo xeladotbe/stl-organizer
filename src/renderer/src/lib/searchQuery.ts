@@ -49,12 +49,12 @@ export function createTextMatcher(token: string): TextMatcher {
  * trimmed query unchanged) if that exact token is already present, case-insensitively, so
  * repeated clicks don't pile up duplicate tokens. */
 export function insertSearchToken(query: string, token: string): string {
-  const trimmed = query.trim()
-  const existingTokens = trimmed.split(/\s+/).filter(Boolean)
+  const trimmed = query.trim();
+  const existingTokens = trimmed.split(/\s+/).filter(Boolean);
   if (existingTokens.some((existing) => existing.toLowerCase() === token.toLowerCase())) {
-    return trimmed
+    return trimmed;
   }
-  return trimmed ? `${trimmed} ${token}` : token
+  return trimmed ? `${trimmed} ${token}` : token;
 }
 
 /** Splits a search query into plain filename/group-name tokens, `tag:name`, `category:name` and

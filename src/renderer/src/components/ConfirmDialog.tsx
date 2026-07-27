@@ -1,4 +1,4 @@
-import { AlertDialog } from 'radix-ui'
+import { AlertDialog } from 'radix-ui';
 
 export function ConfirmDialog({
   title,
@@ -8,12 +8,12 @@ export function ConfirmDialog({
   onConfirm,
   onCancel
 }: {
-  title: string
-  description?: string
-  confirmLabel?: string
-  danger?: boolean
-  onConfirm: () => void
-  onCancel: () => void
+  title: string;
+  description?: string;
+  confirmLabel?: string;
+  danger?: boolean;
+  onConfirm: () => void;
+  onCancel: () => void;
 }): React.JSX.Element {
   return (
     <AlertDialog.Root open onOpenChange={(open) => !open && onCancel()}>
@@ -50,5 +50,5 @@ export function ConfirmDialog({
         </AlertDialog.Content>
       </AlertDialog.Portal>
     </AlertDialog.Root>
-  )
+  );
 }

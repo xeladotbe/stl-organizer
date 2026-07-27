@@ -1,70 +1,70 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { useVirtualizer } from '@tanstack/react-virtual'
-import { useLibraryStore } from '../store/useLibraryStore'
-import { useVisibilityPriority } from '../hooks/useVisibilityPriority'
-import { modelThumbnailUrl } from '@shared/modelFileUrl'
-import { ItemMenu, type MenuItem } from './ItemMenu'
-import { GroupNameDialog } from './GroupNameDialog'
-import { ConfirmDialog } from './ConfirmDialog'
-import type { FileRow, ModelGroupRow } from '@shared/types'
-import type { DisplayItem } from '../lib/groupFiles'
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useVirtualizer } from '@tanstack/react-virtual';
+import { useLibraryStore } from '../store/useLibraryStore';
+import { useVisibilityPriority } from '../hooks/useVisibilityPriority';
+import { modelThumbnailUrl } from '@shared/modelFileUrl';
+import { ItemMenu, type MenuItem } from './ItemMenu';
+import { GroupNameDialog } from './GroupNameDialog';
+import { ConfirmDialog } from './ConfirmDialog';
+import type { FileRow, ModelGroupRow } from '@shared/types';
+import type { DisplayItem } from '../lib/groupFiles';
 
-const CARD_MIN_WIDTH = 140
-const GAP = 12
-const ESTIMATED_ROW_HEIGHT = 190
-const GROUP_TILE_MAX_THUMBS = 4
+const CARD_MIN_WIDTH = 140;
+const GAP = 12;
+const ESTIMATED_ROW_HEIGHT = 190;
+const GROUP_TILE_MAX_THUMBS = 4;
 
 interface RowLayout {
-  columns: number
-  cardWidth: number
+  columns: number;
+  cardWidth: number;
 }
 
 /** Same math as CSS `repeat(auto-fill, minmax(CARD_MIN_WIDTH, 1fr))` would produce, computed in
  * JS so files and group tiles (both rendered at this one uniform width) always match exactly,
  * rather than each row's `<div>` resolving `1fr` independently. */
 function computeLayout(availableWidth: number): RowLayout {
-  const columns = Math.max(1, Math.floor((availableWidth + GAP) / (CARD_MIN_WIDTH + GAP)))
-  const cardWidth = (availableWidth - (columns - 1) * GAP) / columns
-  return { columns, cardWidth }
+  const columns = Math.max(1, Math.floor((availableWidth + GAP) / (CARD_MIN_WIDTH + GAP)));
+  const cardWidth = (availableWidth - (columns - 1) * GAP) / columns;
+  return { columns, cardWidth };
 }
 
 function chunkIntoRows(items: DisplayItem[], columns: number): DisplayItem[][] {
-  const rows: DisplayItem[][] = []
+  const rows: DisplayItem[][] = [];
   for (let i = 0; i < items.length; i += columns) {
-    rows.push(items.slice(i, i + columns))
+    rows.push(items.slice(i, i + columns));
   }
-  return rows
+  return rows;
 }
 
 interface MenuButtonProps {
-  onOpen: (event: React.MouseEvent) => void
+  onOpen: (event: React.MouseEvent) => void;
 }
 
 function MenuButton({ onOpen }: MenuButtonProps): React.JSX.Element {
   return (
     <button
       onClick={(event) => {
-        event.stopPropagation()
-        onOpen(event)
+        event.stopPropagation();
+        onOpen(event);
       }}
       aria-label="More actions"
       className="absolute right-1 top-1 z-10 rounded bg-neutral-950/70 px-1.5 py-0.5 text-xs text-neutral-300 hover:bg-neutral-800"
     >
       ⋮
     </button>
-  )
+  );
 }
 
 interface FileCardProps {
-  file: FileRow
-  width: number
-  isSelected: boolean
-  isMultiSelected: boolean
-  isDuplicate: boolean
-  onSelect: (event: React.MouseEvent) => void
-  onContextMenu: (event: React.MouseEvent) => void
-  onOpenMenu: (event: React.MouseEvent) => void
-  registerVisible: (file: FileRow) => (el: Element | null) => (() => void) | void
+  file: FileRow;
+  width: number;
+  isSelected: boolean;
+  isMultiSelected: boolean;
+  isDuplicate: boolean;
+  onSelect: (event: React.MouseEvent) => void;
+  onContextMenu: (event: React.MouseEvent) => void;
+  onOpenMenu: (event: React.MouseEvent) => void;
+  registerVisible: (file: FileRow) => (el: Element | null) => (() => void) | void;
 }
 
 function FileCard({
@@ -109,16 +109,16 @@ function FileCard({
         {file.filename}
       </span>
     </button>
-  )
+  );
 }
 
 interface GroupTileProps {
-  group: ModelGroupRow
-  members: FileRow[]
-  width: number
-  isSelected: boolean
-  onSelect: () => void
-  onOpenMenu: (event: React.MouseEvent) => void
+  group: ModelGroupRow;
+  members: FileRow[];
+  width: number;
+  isSelected: boolean;
+  onSelect: () => void;
+  onOpenMenu: (event: React.MouseEvent) => void;
 }
 
 function GroupTile({
@@ -129,18 +129,18 @@ function GroupTile({
   onSelect,
   onOpenMenu
 }: GroupTileProps): React.JSX.Element {
-  const overflow = members.length > GROUP_TILE_MAX_THUMBS
+  const overflow = members.length > GROUP_TILE_MAX_THUMBS;
   const shown = overflow
     ? members.slice(0, GROUP_TILE_MAX_THUMBS - 1)
-    : members.slice(0, GROUP_TILE_MAX_THUMBS)
-  const remaining = overflow ? members.length - shown.length : 0
+    : members.slice(0, GROUP_TILE_MAX_THUMBS);
+  const remaining = overflow ? members.length - shown.length : 0;
 
   return (
     <button
       onClick={onSelect}
       onContextMenu={(event) => {
-        event.preventDefault()
-        onOpenMenu(event)
+        event.preventDefault();
+        onOpenMenu(event);
       }}
       style={{ width }}
       className={`relative flex shrink-0 flex-col items-center gap-2 rounded border p-2 text-left ${
@@ -174,117 +174,117 @@ function GroupTile({
         {group.name}
       </span>
     </button>
-  )
+  );
 }
 
-type MenuTarget = { type: 'file'; file: FileRow } | { type: 'group'; group: ModelGroupRow }
-type TrashTarget = { type: 'file'; file: FileRow } | { type: 'selected'; ids: number[] }
+type MenuTarget = { type: 'file'; file: FileRow } | { type: 'group'; group: ModelGroupRow };
+type TrashTarget = { type: 'file'; file: FileRow } | { type: 'selected'; ids: number[] };
 
 interface MenuAnchor {
-  target: MenuTarget
-  anchorEl: HTMLElement
-  offsetX: number
-  offsetY: number
+  target: MenuTarget;
+  anchorEl: HTMLElement;
+  offsetX: number;
+  offsetY: number;
 }
 
 export function FileGrid({ items }: { items: DisplayItem[] }): React.JSX.Element {
-  const selection = useLibraryStore((state) => state.selection)
-  const selectFile = useLibraryStore((state) => state.selectFile)
-  const collapseSelectionTo = useLibraryStore((state) => state.collapseSelectionTo)
-  const selectGroup = useLibraryStore((state) => state.selectGroup)
-  const toggleFileSelection = useLibraryStore((state) => state.toggleFileSelection)
-  const selectFileRange = useLibraryStore((state) => state.selectFileRange)
-  const clearFileSelection = useLibraryStore((state) => state.clearFileSelection)
-  const duplicateIds = useLibraryStore((state) => state.duplicateIds)
-  const selectedFileIds = useLibraryStore((state) => state.selectedFileIds)
-  const moveToTrash = useLibraryStore((state) => state.moveToTrash)
-  const deleteGroup = useLibraryStore((state) => state.deleteGroup)
-  const createGroup = useLibraryStore((state) => state.createGroup)
-  const registerVisible = useVisibilityPriority()
-  const [menu, setMenu] = useState<MenuAnchor | null>(null)
-  const [groupDialogFor, setGroupDialogFor] = useState<number[] | null>(null)
-  const [trashTarget, setTrashTarget] = useState<TrashTarget | null>(null)
+  const selection = useLibraryStore((state) => state.selection);
+  const selectFile = useLibraryStore((state) => state.selectFile);
+  const collapseSelectionTo = useLibraryStore((state) => state.collapseSelectionTo);
+  const selectGroup = useLibraryStore((state) => state.selectGroup);
+  const toggleFileSelection = useLibraryStore((state) => state.toggleFileSelection);
+  const selectFileRange = useLibraryStore((state) => state.selectFileRange);
+  const clearFileSelection = useLibraryStore((state) => state.clearFileSelection);
+  const duplicateIds = useLibraryStore((state) => state.duplicateIds);
+  const selectedFileIds = useLibraryStore((state) => state.selectedFileIds);
+  const moveToTrash = useLibraryStore((state) => state.moveToTrash);
+  const deleteGroup = useLibraryStore((state) => state.deleteGroup);
+  const createGroup = useLibraryStore((state) => state.createGroup);
+  const registerVisible = useVisibilityPriority();
+  const [menu, setMenu] = useState<MenuAnchor | null>(null);
+  const [groupDialogFor, setGroupDialogFor] = useState<number[] | null>(null);
+  const [trashTarget, setTrashTarget] = useState<TrashTarget | null>(null);
 
-  const scrollRef = useRef<HTMLDivElement>(null)
-  const [contentWidth, setContentWidth] = useState(0)
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [contentWidth, setContentWidth] = useState(0);
 
   useEffect(() => {
-    const el = scrollRef.current
-    if (!el) return
+    const el = scrollRef.current;
+    if (!el) return;
     const observer = new ResizeObserver((entries) => {
-      setContentWidth(entries[0].contentRect.width)
-    })
-    observer.observe(el)
-    return () => observer.disconnect()
-  }, [])
+      setContentWidth(entries[0].contentRect.width);
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     const handleKey = (event: KeyboardEvent): void => {
-      if (event.key === 'Escape') clearFileSelection()
-    }
-    window.addEventListener('keydown', handleKey)
-    return () => window.removeEventListener('keydown', handleKey)
-  }, [clearFileSelection])
+      if (event.key === 'Escape') clearFileSelection();
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [clearFileSelection]);
 
-  const layout = computeLayout(contentWidth)
-  const gridRows = useMemo(() => chunkIntoRows(items, layout.columns), [items, layout.columns])
+  const layout = computeLayout(contentWidth);
+  const gridRows = useMemo(() => chunkIntoRows(items, layout.columns), [items, layout.columns]);
   const orderedFileIds = useMemo(
     () => items.filter((item) => item.type === 'file').map((item) => item.file.id),
     [items]
-  )
+  );
 
   const rowVirtualizer = useVirtualizer({
     count: gridRows.length,
     getScrollElement: () => scrollRef.current,
     estimateSize: () => ESTIMATED_ROW_HEIGHT,
     overscan: 4
-  })
+  });
 
   const handleFileClick = (event: React.MouseEvent, id: number): void => {
-    if (event.shiftKey) selectFileRange(orderedFileIds, id)
-    else if (event.ctrlKey || event.metaKey) toggleFileSelection(id)
-    else selectFile(id)
-  }
+    if (event.shiftKey) selectFileRange(orderedFileIds, id);
+    else if (event.ctrlKey || event.metaKey) toggleFileSelection(id);
+    else selectFile(id);
+  };
 
-  const handleTrash = (file: FileRow): void => setTrashTarget({ type: 'file', file })
-  const handleTrashSelected = (ids: number[]): void => setTrashTarget({ type: 'selected', ids })
+  const handleTrash = (file: FileRow): void => setTrashTarget({ type: 'file', file });
+  const handleTrashSelected = (ids: number[]): void => setTrashTarget({ type: 'selected', ids });
 
   const openMenuAt = (event: React.MouseEvent, target: MenuTarget): void => {
-    const anchorEl = event.currentTarget as HTMLElement
-    const rect = anchorEl.getBoundingClientRect()
+    const anchorEl = event.currentTarget as HTMLElement;
+    const rect = anchorEl.getBoundingClientRect();
     setMenu({
       target,
       anchorEl,
       offsetX: event.clientX - rect.left,
       offsetY: event.clientY - rect.top
-    })
-  }
+    });
+  };
 
   const openFileMenu = (event: React.MouseEvent, file: FileRow): void => {
     if (!selectedFileIds.has(file.id)) {
       // Opening the menu (right-click or the ⋮ button) outside the current selection collapses
       // it to just this file, matching standard file-explorer behavior - but must not open the
       // detail pane, so this goes through collapseSelectionTo rather than selectFile.
-      collapseSelectionTo(file.id)
+      collapseSelectionTo(file.id);
     }
-    openMenuAt(event, { type: 'file', file })
-  }
+    openMenuAt(event, { type: 'file', file });
+  };
 
   const menuItems: MenuItem[] = (() => {
-    if (!menu) return []
-    const target = menu.target
+    if (!menu) return [];
+    const target = menu.target;
     if (target.type === 'group') {
-      return [{ label: 'Ungroup', onClick: () => void deleteGroup(target.group.id) }]
+      return [{ label: 'Ungroup', onClick: () => void deleteGroup(target.group.id) }];
     }
-    const ids = selectedFileIds.has(target.file.id) ? [...selectedFileIds] : [target.file.id]
+    const ids = selectedFileIds.has(target.file.id) ? [...selectedFileIds] : [target.file.id];
     if (ids.length > 1) {
       return [
         { label: 'Group…', onClick: () => setGroupDialogFor(ids) },
         { label: `Delete (${ids.length})`, danger: true, onClick: () => handleTrashSelected(ids) }
-      ]
+      ];
     }
-    return [{ label: 'Delete', danger: true, onClick: () => handleTrash(target.file) }]
-  })()
+    return [{ label: 'Delete', danger: true, onClick: () => handleTrash(target.file) }];
+  })();
 
   return (
     <div ref={scrollRef} className="h-full overflow-y-auto p-4">
@@ -302,8 +302,8 @@ export function FileGrid({ items }: { items: DisplayItem[] }): React.JSX.Element
           count={groupDialogFor.length}
           onCancel={() => setGroupDialogFor(null)}
           onConfirm={(name) => {
-            void createGroup(name, groupDialogFor)
-            setGroupDialogFor(null)
+            void createGroup(name, groupDialogFor);
+            setGroupDialogFor(null);
           }}
         />
       )}
@@ -320,18 +320,18 @@ export function FileGrid({ items }: { items: DisplayItem[] }): React.JSX.Element
           onCancel={() => setTrashTarget(null)}
           onConfirm={() => {
             if (trashTarget.type === 'file') {
-              void moveToTrash(trashTarget.file.id)
+              void moveToTrash(trashTarget.file.id);
             } else {
-              for (const id of trashTarget.ids) void moveToTrash(id)
-              clearFileSelection()
+              for (const id of trashTarget.ids) void moveToTrash(id);
+              clearFileSelection();
             }
-            setTrashTarget(null)
+            setTrashTarget(null);
           }}
         />
       )}
       <div style={{ height: rowVirtualizer.getTotalSize(), position: 'relative' }}>
         {rowVirtualizer.getVirtualItems().map((virtualRow) => {
-          const row = gridRows[virtualRow.index]
+          const row = gridRows[virtualRow.index];
           return (
             <div
               key={virtualRow.key}
@@ -358,8 +358,8 @@ export function FileGrid({ items }: { items: DisplayItem[] }): React.JSX.Element
                     isDuplicate={duplicateIds.has(item.file.id)}
                     onSelect={(event) => handleFileClick(event, item.file.id)}
                     onContextMenu={(event) => {
-                      event.preventDefault()
-                      openFileMenu(event, item.file)
+                      event.preventDefault();
+                      openFileMenu(event, item.file);
                     }}
                     onOpenMenu={(event) => openFileMenu(event, item.file)}
                     registerVisible={registerVisible}
@@ -377,9 +377,9 @@ export function FileGrid({ items }: { items: DisplayItem[] }): React.JSX.Element
                 )
               )}
             </div>
-          )
+          );
         })}
       </div>
     </div>
-  )
+  );
 }

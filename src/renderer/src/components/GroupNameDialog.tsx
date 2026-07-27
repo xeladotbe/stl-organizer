@@ -1,19 +1,19 @@
-import { useRef, useState } from 'react'
-import { Dialog } from 'radix-ui'
+import { useRef, useState } from 'react';
+import { Dialog } from 'radix-ui';
 
 export function GroupNameDialog({
   count,
   onConfirm,
   onCancel
 }: {
-  count: number
-  onConfirm: (name: string) => void
-  onCancel: () => void
+  count: number;
+  onConfirm: (name: string) => void;
+  onCancel: () => void;
 }): React.JSX.Element {
-  const [name, setName] = useState('')
-  const inputRef = useRef<HTMLInputElement>(null)
+  const [name, setName] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  const submit = (): void => onConfirm(name.trim() || 'New virtual file')
+  const submit = (): void => onConfirm(name.trim() || 'New virtual file');
 
   return (
     <Dialog.Root open onOpenChange={(open) => !open && onCancel()}>
@@ -23,8 +23,8 @@ export function GroupNameDialog({
           className="fixed left-1/2 top-1/2 z-50 w-80 -translate-x-1/2 -translate-y-1/2 rounded border border-neutral-700 bg-neutral-900 p-4 shadow-lg focus:outline-none"
           onOpenAutoFocus={(event) => {
             // Focus the name input instead of Radix's default (the dialog content itself).
-            event.preventDefault()
-            inputRef.current?.focus()
+            event.preventDefault();
+            inputRef.current?.focus();
           }}
         >
           <Dialog.Title className="mb-3 text-sm font-semibold text-neutral-200">
@@ -54,5 +54,5 @@ export function GroupNameDialog({
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>
-  )
+  );
 }

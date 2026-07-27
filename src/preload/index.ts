@@ -1,5 +1,5 @@
-import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
-import { electronAPI } from '@electron-toolkit/preload'
+import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron';
+import { electronAPI } from '@electron-toolkit/preload';
 import type {
   WatchedFolderRow,
   FileRow,
@@ -10,12 +10,12 @@ import type {
   CategoryRow,
   FileTagLink,
   ModelGroupRow
-} from '../shared/types'
+} from '../shared/types';
 
 function subscribe<T>(channel: string, callback: (payload: T) => void): () => void {
-  const listener = (_event: IpcRendererEvent, payload: T): void => callback(payload)
-  ipcRenderer.on(channel, listener)
-  return () => ipcRenderer.removeListener(channel, listener)
+  const listener = (_event: IpcRendererEvent, payload: T): void => callback(payload);
+  ipcRenderer.on(channel, listener);
+  return () => ipcRenderer.removeListener(channel, listener);
 }
 
 // Custom APIs for renderer
@@ -81,23 +81,23 @@ const api = {
     subscribe('scan:progress', callback),
   onFilesChanged: (callback: (event: FileChangedEvent) => void): (() => void) =>
     subscribe('files:changed', callback)
-}
+};
 
-export type Api = typeof api
+export type Api = typeof api;
 
 // Use `contextBridge` APIs to expose Electron APIs to
 // renderer only if context isolation is enabled, otherwise
 // just add to the DOM global.
 if (process.contextIsolated) {
   try {
-    contextBridge.exposeInMainWorld('electron', electronAPI)
-    contextBridge.exposeInMainWorld('api', api)
+    contextBridge.exposeInMainWorld('electron', electronAPI);
+    contextBridge.exposeInMainWorld('api', api);
   } catch (error) {
-    console.error(error)
+    console.error(error);
   }
 } else {
   // @ts-ignore (define in dts)
-  window.electron = electronAPI
+  window.electron = electronAPI;
   // @ts-ignore (define in dts)
-  window.api = api
+  window.api = api;
 }

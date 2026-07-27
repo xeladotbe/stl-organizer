@@ -1,9 +1,9 @@
-import { useRef, useState } from 'react'
-import { buildComboOptions } from '../lib/comboOptions'
+import { useRef, useState } from 'react';
+import { buildComboOptions } from '../lib/comboOptions';
 
 export interface ChipComboBoxItem {
-  id: number
-  name: string
+  id: number;
+  name: string;
 }
 
 /**
@@ -24,30 +24,30 @@ export function ChipComboBox({
   onSelectExisting,
   onCreateNew
 }: {
-  chips: ChipComboBoxItem[]
-  suggestions: ChipComboBoxItem[]
-  placeholder: string
-  chipClassName?: string
-  onRemove: (id: number) => void
-  onSelectExisting: (id: number) => void
-  onCreateNew: (name: string) => void
+  chips: ChipComboBoxItem[];
+  suggestions: ChipComboBoxItem[];
+  placeholder: string;
+  chipClassName?: string;
+  onRemove: (id: number) => void;
+  onSelectExisting: (id: number) => void;
+  onCreateNew: (name: string) => void;
 }): React.JSX.Element {
-  const [query, setQuery] = useState('')
-  const [open, setOpen] = useState(false)
-  const [highlightIndex, setHighlightIndex] = useState(0)
-  const inputRef = useRef<HTMLInputElement>(null)
+  const [query, setQuery] = useState('');
+  const [open, setOpen] = useState(false);
+  const [highlightIndex, setHighlightIndex] = useState(0);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  const options = buildComboOptions(suggestions, query)
+  const options = buildComboOptions(suggestions, query);
 
   const selectAt = (index: number): void => {
-    const option = options[index]
-    if (!option) return
-    if (option.type === 'create') onCreateNew(option.name)
-    else onSelectExisting(option.id)
-    setQuery('')
-    setHighlightIndex(0)
-    setOpen(false)
-  }
+    const option = options[index];
+    if (!option) return;
+    if (option.type === 'create') onCreateNew(option.name);
+    else onSelectExisting(option.id);
+    setQuery('');
+    setHighlightIndex(0);
+    setOpen(false);
+  };
 
   return (
     <div className="relative">
@@ -63,8 +63,8 @@ export function ChipComboBox({
             {chip.name}
             <button
               onClick={(event) => {
-                event.stopPropagation()
-                onRemove(chip.id)
+                event.stopPropagation();
+                onRemove(chip.id);
               }}
               aria-label={`Remove ${chip.name}`}
               className="text-current opacity-70 hover:opacity-100"
@@ -77,27 +77,27 @@ export function ChipComboBox({
           ref={inputRef}
           value={query}
           onChange={(event) => {
-            setQuery(event.target.value)
-            setHighlightIndex(0)
-            setOpen(true)
+            setQuery(event.target.value);
+            setHighlightIndex(0);
+            setOpen(true);
           }}
           onFocus={() => setOpen(true)}
           onBlur={() => setOpen(false)}
           onKeyDown={(event) => {
             if (event.key === 'ArrowDown') {
-              event.preventDefault()
-              setOpen(true)
-              setHighlightIndex((index) => Math.min(index + 1, options.length - 1))
+              event.preventDefault();
+              setOpen(true);
+              setHighlightIndex((index) => Math.min(index + 1, options.length - 1));
             } else if (event.key === 'ArrowUp') {
-              event.preventDefault()
-              setHighlightIndex((index) => Math.max(index - 1, 0))
+              event.preventDefault();
+              setHighlightIndex((index) => Math.max(index - 1, 0));
             } else if (event.key === 'Enter') {
-              event.preventDefault()
-              if (options.length > 0) selectAt(highlightIndex)
+              event.preventDefault();
+              if (options.length > 0) selectAt(highlightIndex);
             } else if (event.key === 'Escape') {
-              setOpen(false)
+              setOpen(false);
             } else if (event.key === 'Backspace' && query === '' && chips.length > 0) {
-              onRemove(chips[chips.length - 1].id)
+              onRemove(chips[chips.length - 1].id);
             }
           }}
           placeholder={chips.length === 0 ? placeholder : ''}
@@ -112,8 +112,8 @@ export function ChipComboBox({
                 type="button"
                 onMouseDown={(event) => event.preventDefault()}
                 onClick={() => {
-                  selectAt(index)
-                  inputRef.current?.focus()
+                  selectAt(index);
+                  inputRef.current?.focus();
                 }}
                 className={`block w-full truncate px-2 py-1 text-left text-xs ${
                   index === highlightIndex
@@ -128,5 +128,5 @@ export function ChipComboBox({
         </ul>
       )}
     </div>
-  )
+  );
 }

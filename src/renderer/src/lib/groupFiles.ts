@@ -1,7 +1,7 @@
-import type { FileRow, ModelGroupRow } from '@shared/types'
+import type { FileRow, ModelGroupRow } from '@shared/types';
 
 export type DisplayItem =
-  { type: 'file'; file: FileRow } | { type: 'group'; group: ModelGroupRow; members: FileRow[] }
+  { type: 'file'; file: FileRow } | { type: 'group'; group: ModelGroupRow; members: FileRow[] };
 
 /**
  * Bundles an already search/filtered flat file list into display items: lone files pass through,
@@ -13,32 +13,32 @@ export type DisplayItem =
  * `files` is already in (e.g. sorted by name) instead of always trailing behind every lone file.
  */
 export function toDisplayItems(files: FileRow[], groups: ModelGroupRow[]): DisplayItem[] {
-  const groupById = new Map(groups.map((group) => [group.id, group]))
-  const membersByGroup = new Map<number, FileRow[]>()
+  const groupById = new Map(groups.map((group) => [group.id, group]));
+  const membersByGroup = new Map<number, FileRow[]>();
 
   for (const file of files) {
-    if (file.group_id == null || !groupById.has(file.group_id)) continue
-    const list = membersByGroup.get(file.group_id) ?? []
-    list.push(file)
-    membersByGroup.set(file.group_id, list)
+    if (file.group_id == null || !groupById.has(file.group_id)) continue;
+    const list = membersByGroup.get(file.group_id) ?? [];
+    list.push(file);
+    membersByGroup.set(file.group_id, list);
   }
 
-  const items: DisplayItem[] = []
-  const emittedGroups = new Set<number>()
+  const items: DisplayItem[] = [];
+  const emittedGroups = new Set<number>();
 
   for (const file of files) {
     if (file.group_id == null || !groupById.has(file.group_id)) {
-      items.push({ type: 'file', file })
-      continue
+      items.push({ type: 'file', file });
+      continue;
     }
-    if (emittedGroups.has(file.group_id)) continue
-    emittedGroups.add(file.group_id)
+    if (emittedGroups.has(file.group_id)) continue;
+    emittedGroups.add(file.group_id);
     items.push({
       type: 'group',
       group: groupById.get(file.group_id)!,
       members: membersByGroup.get(file.group_id)!
-    })
+    });
   }
 
-  return items
+  return items;
 }

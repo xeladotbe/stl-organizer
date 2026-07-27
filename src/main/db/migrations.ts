@@ -1,18 +1,18 @@
-import type Database from 'better-sqlite3'
-import { backfillAutoGroups } from '../scanning/backfillAutoGroups'
+import type Database from 'better-sqlite3';
+import { backfillAutoGroups } from '../scanning/backfillAutoGroups';
 
 export interface Migration {
-  id: number
-  name: string
+  id: number;
+  name: string;
   /** Raw schema DDL, run first if present. */
-  sql?: string
+  sql?: string;
   /**
    * One-off data transform, run after `sql` (if both are present) inside the same transaction as
    * the rest of migration application. Used for migrations that need JS logic rather than pure
    * DDL/DML - e.g. id 3's auto-group backfill (see backfillAutoGroups.ts), which needs to compare
    * file timestamps and replay grouping decisions, not just alter the schema.
    */
-  migrate?: (db: Database.Database) => void
+  migrate?: (db: Database.Database) => void;
 }
 
 export const migrations: Migration[] = [
@@ -91,7 +91,7 @@ export const migrations: Migration[] = [
     // scanned after this point get the equivalent live treatment via maybeAutoGroupFile
     // (autoGroup.ts), hooked into watcherManager.ts.
     migrate: (db) => {
-      backfillAutoGroups(db)
+      backfillAutoGroups(db);
     }
   }
-]
+];

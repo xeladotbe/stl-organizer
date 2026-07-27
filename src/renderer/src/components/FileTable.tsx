@@ -1,33 +1,33 @@
-import { useMemo, useRef, useEffect, useState } from 'react'
-import { useVirtualizer } from '@tanstack/react-virtual'
-import { useLibraryStore } from '../store/useLibraryStore'
-import { useVisibilityPriority } from '../hooks/useVisibilityPriority'
-import { formatSize, formatDateTime } from '../lib/format'
-import { modelThumbnailUrl } from '@shared/modelFileUrl'
-import { ItemMenu, type MenuItem } from './ItemMenu'
-import { GroupNameDialog } from './GroupNameDialog'
-import { ConfirmDialog } from './ConfirmDialog'
-import type { FileRow, ModelGroupRow } from '@shared/types'
-import type { DisplayItem } from '../lib/groupFiles'
+import { useMemo, useRef, useEffect, useState } from 'react';
+import { useVirtualizer } from '@tanstack/react-virtual';
+import { useLibraryStore } from '../store/useLibraryStore';
+import { useVisibilityPriority } from '../hooks/useVisibilityPriority';
+import { formatSize, formatDateTime } from '../lib/format';
+import { modelThumbnailUrl } from '@shared/modelFileUrl';
+import { ItemMenu, type MenuItem } from './ItemMenu';
+import { GroupNameDialog } from './GroupNameDialog';
+import { ConfirmDialog } from './ConfirmDialog';
+import type { FileRow, ModelGroupRow } from '@shared/types';
+import type { DisplayItem } from '../lib/groupFiles';
 
-type MenuTarget = { type: 'file'; file: FileRow } | { type: 'group'; group: ModelGroupRow }
-type TrashTarget = { type: 'file'; file: FileRow } | { type: 'selected'; ids: number[] }
+type MenuTarget = { type: 'file'; file: FileRow } | { type: 'group'; group: ModelGroupRow };
+type TrashTarget = { type: 'file'; file: FileRow } | { type: 'selected'; ids: number[] };
 
 interface MenuAnchor {
-  target: MenuTarget
-  anchorEl: HTMLElement
-  offsetX: number
-  offsetY: number
+  target: MenuTarget;
+  anchorEl: HTMLElement;
+  offsetX: number;
+  offsetY: number;
 }
 
-type SortKey = 'filename' | 'ext' | 'size' | 'mtime_ms'
-type SortDirection = 'asc' | 'desc'
+type SortKey = 'filename' | 'ext' | 'size' | 'mtime_ms';
+type SortDirection = 'asc' | 'desc';
 
 interface ColumnDef {
-  key: string
-  label: string
-  sortKey?: SortKey
-  defaultWidth: number
+  key: string;
+  label: string;
+  sortKey?: SortKey;
+  defaultWidth: number;
 }
 
 const COLUMNS: ColumnDef[] = [
@@ -36,34 +36,34 @@ const COLUMNS: ColumnDef[] = [
   { key: 'type', label: 'Type', sortKey: 'ext', defaultWidth: 80 },
   { key: 'size', label: 'Size', sortKey: 'size', defaultWidth: 100 },
   { key: 'modified', label: 'Modified', sortKey: 'mtime_ms', defaultWidth: 170 }
-]
+];
 
-const MIN_COLUMN_WIDTH = 60
-const WIDTHS_STORAGE_KEY = 'stl-organizer:columnWidths'
-const ROW_HEIGHT = 48
+const MIN_COLUMN_WIDTH = 60;
+const WIDTHS_STORAGE_KEY = 'stl-organizer:columnWidths';
+const ROW_HEIGHT = 48;
 
 function loadStoredWidths(): Record<string, number> {
-  const defaults = Object.fromEntries(COLUMNS.map((c) => [c.key, c.defaultWidth]))
+  const defaults = Object.fromEntries(COLUMNS.map((c) => [c.key, c.defaultWidth]));
   try {
-    const raw = localStorage.getItem(WIDTHS_STORAGE_KEY)
-    if (raw) return { ...defaults, ...(JSON.parse(raw) as Record<string, number>) }
+    const raw = localStorage.getItem(WIDTHS_STORAGE_KEY);
+    if (raw) return { ...defaults, ...(JSON.parse(raw) as Record<string, number>) };
   } catch {
     // ignore malformed storage, fall back to defaults
   }
-  return defaults
+  return defaults;
 }
 
 function sortValue(item: DisplayItem, key: SortKey): string | number {
-  if (item.type === 'file') return item.file[key]
+  if (item.type === 'file') return item.file[key];
   switch (key) {
     case 'filename':
-      return item.group.name
+      return item.group.name;
     case 'ext':
-      return ''
+      return '';
     case 'size':
-      return item.members.reduce((sum, file) => sum + file.size, 0)
+      return item.members.reduce((sum, file) => sum + file.size, 0);
     case 'mtime_ms':
-      return Math.max(...item.members.map((file) => file.mtime_ms))
+      return Math.max(...item.members.map((file) => file.mtime_ms));
   }
 }
 
@@ -72,19 +72,19 @@ function sortValue(item: DisplayItem, key: SortKey): string | number {
 // no collapse - so this is a straight one-to-many expansion, not stateful.
 type VirtualRow =
   | { type: 'file'; file: FileRow; indent?: boolean }
-  | { type: 'group'; group: ModelGroupRow; members: FileRow[] }
+  | { type: 'group'; group: ModelGroupRow; members: FileRow[] };
 
 function buildVirtualRows(items: DisplayItem[]): VirtualRow[] {
-  const rows: VirtualRow[] = []
+  const rows: VirtualRow[] = [];
   for (const item of items) {
     if (item.type === 'file') {
-      rows.push({ type: 'file', file: item.file })
-      continue
+      rows.push({ type: 'file', file: item.file });
+      continue;
     }
-    rows.push({ type: 'group', group: item.group, members: item.members })
-    for (const file of item.members) rows.push({ type: 'file', file, indent: true })
+    rows.push({ type: 'group', group: item.group, members: item.members });
+    for (const file of item.members) rows.push({ type: 'file', file, indent: true });
   }
-  return rows
+  return rows;
 }
 
 function LabelBadges({
@@ -92,9 +92,9 @@ function LabelBadges({
   tagNames,
   isDuplicate
 }: {
-  categoryName?: string
-  tagNames: string[]
-  isDuplicate: boolean
+  categoryName?: string;
+  tagNames: string[];
+  isDuplicate: boolean;
 }): React.JSX.Element {
   return (
     <div className="flex flex-wrap gap-1">
@@ -117,20 +117,20 @@ function LabelBadges({
         </span>
       )}
     </div>
-  )
+  );
 }
 
 interface FileRowViewProps {
-  file: FileRow
-  indent?: boolean
-  isSelected: boolean
-  isMultiSelected: boolean
-  categoryName?: string
-  tagNames: string[]
-  isDuplicate: boolean
-  onSelect: (event: React.MouseEvent) => void
-  onContextMenu: (event: React.MouseEvent) => void
-  registerVisible: (file: FileRow) => (el: Element | null) => (() => void) | void
+  file: FileRow;
+  indent?: boolean;
+  isSelected: boolean;
+  isMultiSelected: boolean;
+  categoryName?: string;
+  tagNames: string[];
+  isDuplicate: boolean;
+  onSelect: (event: React.MouseEvent) => void;
+  onContextMenu: (event: React.MouseEvent) => void;
+  registerVisible: (file: FileRow) => (el: Element | null) => (() => void) | void;
 }
 
 function FileRowView({
@@ -179,159 +179,159 @@ function FileRowView({
         {formatDateTime(file.mtime_ms)}
       </td>
     </tr>
-  )
+  );
 }
 
 export function FileTable({ items }: { items: DisplayItem[] }): React.JSX.Element {
-  const selection = useLibraryStore((state) => state.selection)
-  const selectFile = useLibraryStore((state) => state.selectFile)
-  const collapseSelectionTo = useLibraryStore((state) => state.collapseSelectionTo)
-  const selectGroup = useLibraryStore((state) => state.selectGroup)
-  const toggleFileSelection = useLibraryStore((state) => state.toggleFileSelection)
-  const selectFileRange = useLibraryStore((state) => state.selectFileRange)
-  const clearFileSelection = useLibraryStore((state) => state.clearFileSelection)
-  const duplicateIds = useLibraryStore((state) => state.duplicateIds)
-  const tags = useLibraryStore((state) => state.tags)
-  const categories = useLibraryStore((state) => state.categories)
-  const fileTagIds = useLibraryStore((state) => state.fileTagIds)
-  const selectedFileIds = useLibraryStore((state) => state.selectedFileIds)
-  const moveToTrash = useLibraryStore((state) => state.moveToTrash)
-  const deleteGroup = useLibraryStore((state) => state.deleteGroup)
-  const createGroup = useLibraryStore((state) => state.createGroup)
-  const registerVisible = useVisibilityPriority()
+  const selection = useLibraryStore((state) => state.selection);
+  const selectFile = useLibraryStore((state) => state.selectFile);
+  const collapseSelectionTo = useLibraryStore((state) => state.collapseSelectionTo);
+  const selectGroup = useLibraryStore((state) => state.selectGroup);
+  const toggleFileSelection = useLibraryStore((state) => state.toggleFileSelection);
+  const selectFileRange = useLibraryStore((state) => state.selectFileRange);
+  const clearFileSelection = useLibraryStore((state) => state.clearFileSelection);
+  const duplicateIds = useLibraryStore((state) => state.duplicateIds);
+  const tags = useLibraryStore((state) => state.tags);
+  const categories = useLibraryStore((state) => state.categories);
+  const fileTagIds = useLibraryStore((state) => state.fileTagIds);
+  const selectedFileIds = useLibraryStore((state) => state.selectedFileIds);
+  const moveToTrash = useLibraryStore((state) => state.moveToTrash);
+  const deleteGroup = useLibraryStore((state) => state.deleteGroup);
+  const createGroup = useLibraryStore((state) => state.createGroup);
+  const registerVisible = useVisibilityPriority();
 
-  const scrollRef = useRef<HTMLDivElement>(null)
-  const theadRef = useRef<HTMLTableSectionElement>(null)
-  const [widths, setWidths] = useState<Record<string, number>>(loadStoredWidths)
-  const [sort, setSort] = useState<{ key: SortKey; direction: SortDirection } | null>(null)
-  const [menu, setMenu] = useState<MenuAnchor | null>(null)
-  const [groupDialogFor, setGroupDialogFor] = useState<number[] | null>(null)
-  const [trashTarget, setTrashTarget] = useState<TrashTarget | null>(null)
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const theadRef = useRef<HTMLTableSectionElement>(null);
+  const [widths, setWidths] = useState<Record<string, number>>(loadStoredWidths);
+  const [sort, setSort] = useState<{ key: SortKey; direction: SortDirection } | null>(null);
+  const [menu, setMenu] = useState<MenuAnchor | null>(null);
+  const [groupDialogFor, setGroupDialogFor] = useState<number[] | null>(null);
+  const [trashTarget, setTrashTarget] = useState<TrashTarget | null>(null);
 
   useEffect(() => {
-    localStorage.setItem(WIDTHS_STORAGE_KEY, JSON.stringify(widths))
-  }, [widths])
+    localStorage.setItem(WIDTHS_STORAGE_KEY, JSON.stringify(widths));
+  }, [widths]);
 
   useEffect(() => {
     const handleKey = (event: KeyboardEvent): void => {
-      if (event.key === 'Escape') clearFileSelection()
-    }
-    window.addEventListener('keydown', handleKey)
-    return () => window.removeEventListener('keydown', handleKey)
-  }, [clearFileSelection])
+      if (event.key === 'Escape') clearFileSelection();
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [clearFileSelection]);
 
-  const tagById = useMemo(() => new Map(tags.map((tag) => [tag.id, tag])), [tags])
+  const tagById = useMemo(() => new Map(tags.map((tag) => [tag.id, tag])), [tags]);
   const categoryById = useMemo(
     () => new Map(categories.map((category) => [category.id, category])),
     [categories]
-  )
+  );
 
   const sortedItems = useMemo(() => {
-    if (!sort) return items
-    const factor = sort.direction === 'asc' ? 1 : -1
+    if (!sort) return items;
+    const factor = sort.direction === 'asc' ? 1 : -1;
     return [...items].sort((a, b) => {
-      const av = sortValue(a, sort.key)
-      const bv = sortValue(b, sort.key)
-      if (typeof av === 'string' && typeof bv === 'string') return av.localeCompare(bv) * factor
-      if (typeof av === 'number' && typeof bv === 'number') return (av - bv) * factor
-      return 0
-    })
-  }, [items, sort])
+      const av = sortValue(a, sort.key);
+      const bv = sortValue(b, sort.key);
+      if (typeof av === 'string' && typeof bv === 'string') return av.localeCompare(bv) * factor;
+      if (typeof av === 'number' && typeof bv === 'number') return (av - bv) * factor;
+      return 0;
+    });
+  }, [items, sort]);
 
-  const virtualRows = useMemo(() => buildVirtualRows(sortedItems), [sortedItems])
+  const virtualRows = useMemo(() => buildVirtualRows(sortedItems), [sortedItems]);
 
   const orderedFileIds = useMemo(
     () => virtualRows.filter((row) => row.type === 'file').map((row) => row.file.id),
     [virtualRows]
-  )
+  );
 
   const rowVirtualizer = useVirtualizer({
     count: virtualRows.length,
     getScrollElement: () => scrollRef.current,
     estimateSize: () => ROW_HEIGHT,
     overscan: 12
-  })
-  const virtualItems = rowVirtualizer.getVirtualItems()
-  const paddingTop = virtualItems.length > 0 ? virtualItems[0].start : 0
+  });
+  const virtualItems = rowVirtualizer.getVirtualItems();
+  const paddingTop = virtualItems.length > 0 ? virtualItems[0].start : 0;
   const paddingBottom =
     virtualItems.length > 0
       ? rowVirtualizer.getTotalSize() - virtualItems[virtualItems.length - 1].end
-      : 0
+      : 0;
 
   const toggleSort = (key: SortKey): void => {
     setSort((prev) => {
-      if (!prev || prev.key !== key) return { key, direction: 'asc' }
-      return { key, direction: prev.direction === 'asc' ? 'desc' : 'asc' }
-    })
-  }
+      if (!prev || prev.key !== key) return { key, direction: 'asc' };
+      return { key, direction: prev.direction === 'asc' ? 'desc' : 'asc' };
+    });
+  };
 
   const startResize =
     (key: string) =>
     (event: React.MouseEvent): void => {
-      event.preventDefault()
-      const startX = event.clientX
-      const startWidth = widths[key] ?? 120
+      event.preventDefault();
+      const startX = event.clientX;
+      const startWidth = widths[key] ?? 120;
 
       const handleMouseMove = (moveEvent: MouseEvent): void => {
-        const delta = moveEvent.clientX - startX
-        setWidths((prev) => ({ ...prev, [key]: Math.max(MIN_COLUMN_WIDTH, startWidth + delta) }))
-      }
+        const delta = moveEvent.clientX - startX;
+        setWidths((prev) => ({ ...prev, [key]: Math.max(MIN_COLUMN_WIDTH, startWidth + delta) }));
+      };
       const handleMouseUp = (): void => {
-        window.removeEventListener('mousemove', handleMouseMove)
-        window.removeEventListener('mouseup', handleMouseUp)
-      }
-      window.addEventListener('mousemove', handleMouseMove)
-      window.addEventListener('mouseup', handleMouseUp)
-    }
+        window.removeEventListener('mousemove', handleMouseMove);
+        window.removeEventListener('mouseup', handleMouseUp);
+      };
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+    };
 
   const fileTagLabels = (fileId: number): string[] =>
-    (fileTagIds.get(fileId) ?? []).map((tagId) => tagById.get(tagId)?.name ?? String(tagId))
+    (fileTagIds.get(fileId) ?? []).map((tagId) => tagById.get(tagId)?.name ?? String(tagId));
 
   const handleFileClick = (event: React.MouseEvent, id: number): void => {
-    if (event.shiftKey) selectFileRange(orderedFileIds, id)
-    else if (event.ctrlKey || event.metaKey) toggleFileSelection(id)
-    else selectFile(id)
-  }
+    if (event.shiftKey) selectFileRange(orderedFileIds, id);
+    else if (event.ctrlKey || event.metaKey) toggleFileSelection(id);
+    else selectFile(id);
+  };
 
-  const handleTrash = (file: FileRow): void => setTrashTarget({ type: 'file', file })
-  const handleTrashSelected = (ids: number[]): void => setTrashTarget({ type: 'selected', ids })
+  const handleTrash = (file: FileRow): void => setTrashTarget({ type: 'file', file });
+  const handleTrashSelected = (ids: number[]): void => setTrashTarget({ type: 'selected', ids });
 
   const openMenuAt = (event: React.MouseEvent, target: MenuTarget): void => {
-    const anchorEl = event.currentTarget as HTMLElement
-    const rect = anchorEl.getBoundingClientRect()
+    const anchorEl = event.currentTarget as HTMLElement;
+    const rect = anchorEl.getBoundingClientRect();
     setMenu({
       target,
       anchorEl,
       offsetX: event.clientX - rect.left,
       offsetY: event.clientY - rect.top
-    })
-  }
+    });
+  };
 
   const openFileMenu = (event: React.MouseEvent, file: FileRow): void => {
     if (!selectedFileIds.has(file.id)) {
       // Right-clicking outside the current selection collapses it to just this file, matching
       // standard file-explorer behavior - but must not open the detail pane, so this goes
       // through collapseSelectionTo rather than selectFile.
-      collapseSelectionTo(file.id)
+      collapseSelectionTo(file.id);
     }
-    openMenuAt(event, { type: 'file', file })
-  }
+    openMenuAt(event, { type: 'file', file });
+  };
 
   const menuItems: MenuItem[] = (() => {
-    if (!menu) return []
-    const target = menu.target
+    if (!menu) return [];
+    const target = menu.target;
     if (target.type === 'group') {
-      return [{ label: 'Ungroup', onClick: () => void deleteGroup(target.group.id) }]
+      return [{ label: 'Ungroup', onClick: () => void deleteGroup(target.group.id) }];
     }
-    const ids = selectedFileIds.has(target.file.id) ? [...selectedFileIds] : [target.file.id]
+    const ids = selectedFileIds.has(target.file.id) ? [...selectedFileIds] : [target.file.id];
     if (ids.length > 1) {
       return [
         { label: 'Group…', onClick: () => setGroupDialogFor(ids) },
         { label: `Delete (${ids.length})`, danger: true, onClick: () => handleTrashSelected(ids) }
-      ]
+      ];
     }
-    return [{ label: 'Delete', danger: true, onClick: () => handleTrash(target.file) }]
-  })()
+    return [{ label: 'Delete', danger: true, onClick: () => handleTrash(target.file) }];
+  })();
 
   return (
     <div ref={scrollRef} className="h-full overflow-y-auto">
@@ -350,8 +350,8 @@ export function FileTable({ items }: { items: DisplayItem[] }): React.JSX.Elemen
           count={groupDialogFor.length}
           onCancel={() => setGroupDialogFor(null)}
           onConfirm={(name) => {
-            void createGroup(name, groupDialogFor)
-            setGroupDialogFor(null)
+            void createGroup(name, groupDialogFor);
+            setGroupDialogFor(null);
           }}
         />
       )}
@@ -368,12 +368,12 @@ export function FileTable({ items }: { items: DisplayItem[] }): React.JSX.Elemen
           onCancel={() => setTrashTarget(null)}
           onConfirm={() => {
             if (trashTarget.type === 'file') {
-              void moveToTrash(trashTarget.file.id)
+              void moveToTrash(trashTarget.file.id);
             } else {
-              for (const id of trashTarget.ids) void moveToTrash(id)
-              clearFileSelection()
+              for (const id of trashTarget.ids) void moveToTrash(id);
+              clearFileSelection();
             }
-            setTrashTarget(null)
+            setTrashTarget(null);
           }}
         />
       )}
@@ -418,7 +418,7 @@ export function FileTable({ items }: { items: DisplayItem[] }): React.JSX.Elemen
             </tr>
           )}
           {virtualItems.map((virtualItem) => {
-            const row = virtualRows[virtualItem.index]
+            const row = virtualRows[virtualItem.index];
 
             if (row.type === 'file') {
               return (
@@ -437,32 +437,32 @@ export function FileTable({ items }: { items: DisplayItem[] }): React.JSX.Elemen
                   isDuplicate={duplicateIds.has(row.file.id)}
                   onSelect={(event) => handleFileClick(event, row.file.id)}
                   onContextMenu={(event) => {
-                    event.preventDefault()
-                    event.stopPropagation()
-                    openFileMenu(event, row.file)
+                    event.preventDefault();
+                    event.stopPropagation();
+                    openFileMenu(event, row.file);
                   }}
                   registerVisible={registerVisible}
                 />
-              )
+              );
             }
 
-            const { group, members } = row
-            const isSelected = selection?.type === 'group' && selection.id === group.id
-            const thumbFile = members.find((m) => m.thumbnail_status === 'done')
-            const totalSize = members.reduce((sum, file) => sum + file.size, 0)
-            const groupTagNames = [...new Set(members.flatMap((file) => fileTagLabels(file.id)))]
+            const { group, members } = row;
+            const isSelected = selection?.type === 'group' && selection.id === group.id;
+            const thumbFile = members.find((m) => m.thumbnail_status === 'done');
+            const totalSize = members.reduce((sum, file) => sum + file.size, 0);
+            const groupTagNames = [...new Set(members.flatMap((file) => fileTagLabels(file.id)))];
             const groupCategoryName =
-              group.category_id != null ? categoryById.get(group.category_id)?.name : undefined
-            const groupHasDuplicate = members.some((file) => duplicateIds.has(file.id))
+              group.category_id != null ? categoryById.get(group.category_id)?.name : undefined;
+            const groupHasDuplicate = members.some((file) => duplicateIds.has(file.id));
 
             return (
               <tr
                 key={virtualItem.key}
                 onClick={() => selectGroup(group.id)}
                 onContextMenu={(event) => {
-                  event.preventDefault()
-                  event.stopPropagation()
-                  openMenuAt(event, { type: 'group', group })
+                  event.preventDefault();
+                  event.stopPropagation();
+                  openMenuAt(event, { type: 'group', group });
                 }}
                 className={`cursor-pointer border-t border-neutral-900 hover:bg-neutral-900 ${
                   isSelected ? 'bg-neutral-900' : ''
@@ -504,7 +504,7 @@ export function FileTable({ items }: { items: DisplayItem[] }): React.JSX.Elemen
                   {formatDateTime(Math.max(...members.map((m) => m.mtime_ms)))}
                 </td>
               </tr>
-            )
+            );
           })}
           {paddingBottom > 0 && (
             <tr style={{ height: paddingBottom }} aria-hidden="true">
@@ -514,5 +514,5 @@ export function FileTable({ items }: { items: DisplayItem[] }): React.JSX.Elemen
         </tbody>
       </table>
     </div>
-  )
+  );
 }

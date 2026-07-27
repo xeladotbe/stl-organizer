@@ -1,18 +1,18 @@
-import { useEffect, useRef, useState } from 'react'
-import * as THREE from 'three'
-import type { ModelExt } from '@shared/types'
-import type { ParseRequest, ParseResponse } from '../workers/modelParser.worker'
-import ModelParserWorker from '../workers/modelParser.worker?worker'
+import { useEffect, useRef, useState } from 'react';
+import * as THREE from 'three';
+import type { ModelExt } from '@shared/types';
+import type { ParseRequest, ParseResponse } from '../workers/modelParser.worker';
+import ModelParserWorker from '../workers/modelParser.worker?worker';
 
 export interface ModelPart {
-  geometry: THREE.BufferGeometry
-  color: THREE.Color | null
-  hasVertexColors: boolean
+  geometry: THREE.BufferGeometry;
+  color: THREE.Color | null;
+  hasVertexColors: boolean;
 }
 
 interface ModelPartsState {
-  parts: ModelPart[] | null
-  error: boolean
+  parts: ModelPart[] | null;
+  error: boolean;
 }
 
 /**
@@ -26,50 +26,50 @@ interface ModelPartsState {
  * effect when the model changes (see https://react.dev/learn/you-might-not-need-an-effect).
  */
 export function useModelParts(url: string, ext: ModelExt): ModelPartsState {
-  const [state, setState] = useState<ModelPartsState>({ parts: null, error: false })
-  const currentPartsRef = useRef<ModelPart[] | null>(null)
+  const [state, setState] = useState<ModelPartsState>({ parts: null, error: false });
+  const currentPartsRef = useRef<ModelPart[] | null>(null);
 
   useEffect(() => {
-    const worker = new ModelParserWorker()
-    let cancelled = false
+    const worker = new ModelParserWorker();
+    let cancelled = false;
 
     worker.onmessage = (event: MessageEvent<ParseResponse>) => {
-      if (cancelled) return
-      const data = event.data
+      if (cancelled) return;
+      const data = event.data;
       if (!data.ok) {
-        setState({ parts: null, error: true })
-        return
+        setState({ parts: null, error: true });
+        return;
       }
       const parts = data.parts.map((part) => {
-        const geometry = new THREE.BufferGeometry()
-        geometry.setAttribute('position', new THREE.BufferAttribute(part.position, 3))
-        if (part.normal) geometry.setAttribute('normal', new THREE.BufferAttribute(part.normal, 3))
-        if (part.color) geometry.setAttribute('color', new THREE.BufferAttribute(part.color, 3))
-        if (part.index) geometry.setIndex(new THREE.BufferAttribute(part.index, 1))
+        const geometry = new THREE.BufferGeometry();
+        geometry.setAttribute('position', new THREE.BufferAttribute(part.position, 3));
+        if (part.normal) geometry.setAttribute('normal', new THREE.BufferAttribute(part.normal, 3));
+        if (part.color) geometry.setAttribute('color', new THREE.BufferAttribute(part.color, 3));
+        if (part.index) geometry.setIndex(new THREE.BufferAttribute(part.index, 1));
         return {
           geometry,
           color: part.materialColor ? new THREE.Color(...part.materialColor) : null,
           hasVertexColors: part.color != null
-        }
-      })
-      currentPartsRef.current = parts
-      setState({ parts, error: false })
-    }
+        };
+      });
+      currentPartsRef.current = parts;
+      setState({ parts, error: false });
+    };
     worker.onerror = (event) => {
-      console.error('[model-preview] worker error', event.message)
-      if (!cancelled) setState({ parts: null, error: true })
-    }
+      console.error('[model-preview] worker error', event.message);
+      if (!cancelled) setState({ parts: null, error: true });
+    };
 
-    const request: ParseRequest = { requestId: 1, url, ext }
-    worker.postMessage(request)
+    const request: ParseRequest = { requestId: 1, url, ext };
+    worker.postMessage(request);
 
     return () => {
-      cancelled = true
-      worker.terminate()
-      for (const part of currentPartsRef.current ?? []) part.geometry.dispose()
-      currentPartsRef.current = null
-    }
-  }, [url, ext])
+      cancelled = true;
+      worker.terminate();
+      for (const part of currentPartsRef.current ?? []) part.geometry.dispose();
+      currentPartsRef.current = null;
+    };
+  }, [url, ext]);
 
-  return state
+  return state;
 }

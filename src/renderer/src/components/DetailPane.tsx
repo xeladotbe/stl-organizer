@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useLibraryStore } from '../store/useLibraryStore';
 import { ModelPreview } from './ModelPreview';
 import { ConfirmDialog } from './ConfirmDialog';
 import { ChipComboBox } from './ChipComboBox';
 import { SelectField } from './SelectField';
 import { formatSize } from '../lib/format';
+import { SIDEBAR_WIDTH_STORAGE_KEY, MIN_SIDEBAR_WIDTH, loadStoredSidebarWidth } from '../lib/sidebarStorage';
 import type { CategoryRow, FileRow, TagRow } from '@shared/types';
 
 /**
@@ -176,6 +177,33 @@ export function DetailPane(): React.JSX.Element | null {
   const addSearchToken = useLibraryStore((state) => state.addSearchToken);
 
   const [trashTarget, setTrashTarget] = useState<FileRow | null>(null);
+  const [sidebarWidth, setSidebarWidth] = useState(() => loadStoredSidebarWidth());
+
+  // Persist sidebar width to localStorage whenever it changes
+  useEffect(() => {
+    try {
+      localStorage.setItem(SIDEBAR_WIDTH_STORAGE_KEY, String(sidebarWidth));
+    } catch {
+      // ignore storage errors
+    }
+  }, [sidebarWidth]);
+
+  const startResize = (event: React.MouseEvent): void => {
+    event.preventDefault();
+    const startX = event.clientX;
+    const startWidth = sidebarWidth;
+
+    const handleMouseMove = (moveEvent: MouseEvent): void => {
+      const delta = moveEvent.clientX - startX;
+      setSidebarWidth(() => Math.max(MIN_SIDEBAR_WIDTH, startWidth - delta));
+    };
+    const handleMouseUp = (): void => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+  };
 
   const filterByTag = (name: string): void => addSearchToken(`tag:${name}`);
   const filterByCategory = (name: string): void => addSearchToken(`category:${name}`);
@@ -189,7 +217,10 @@ export function DetailPane(): React.JSX.Element | null {
 
     return (
       <>
-        <aside className="flex w-80 shrink-0 flex-col overflow-y-auto border-l border-neutral-800 bg-neutral-900 p-3">
+        <aside
+          className="relative flex shrink-0 flex-col overflow-y-auto border-l border-neutral-800 bg-neutral-900 p-3"
+          style={{ width: sidebarWidth }}
+        >
           <div className="mb-2 flex items-center justify-between">
             <span className="text-xs font-semibold uppercase text-neutral-500">Virtual</span>
             <button
@@ -264,6 +295,10 @@ export function DetailPane(): React.JSX.Element | null {
           >
             Dissolve group
           </button>
+          <div
+            onMouseDown={startResize}
+            className="absolute left-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-neutral-700"
+          />
         </aside>
         {trashTarget && (
           <ConfirmDialog
@@ -299,7 +334,10 @@ export function DetailPane(): React.JSX.Element | null {
   };
 
   return (
-    <aside className="flex w-80 shrink-0 flex-col overflow-y-auto border-l border-neutral-800 bg-neutral-900 p-3">
+    <aside
+      className="relative flex shrink-0 flex-col overflow-y-auto border-l border-neutral-800 bg-neutral-900 p-3"
+      style={{ width: sidebarWidth }}
+    >
       <div className="mb-2 flex items-center justify-between">
         <span className="text-xs font-semibold uppercase text-neutral-500">Preview</span>
         <button
@@ -310,7 +348,7 @@ export function DetailPane(): React.JSX.Element | null {
           ✕
         </button>
       </div>
-      <ModelPreview file={file} />
+      <ModelPreview file={file} width={sidebarWidth} />
       <div className="mt-3 space-y-1 text-sm">
         <InlineRename
           key={`${file.id}:${baseName}`}
@@ -385,6 +423,10 @@ export function DetailPane(): React.JSX.Element | null {
           onFilterByTag={filterByTag}
         />
       </div>
+      <div
+        onMouseDown={startResize}
+        className="absolute left-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-neutral-700"
+      />
     </aside>
   );
 }

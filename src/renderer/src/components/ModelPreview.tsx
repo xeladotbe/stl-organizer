@@ -5,6 +5,7 @@ import { modelFileUrl } from '@shared/modelFileUrl';
 import { hdriFileUrl } from '@shared/hdriFileUrl';
 import { useModelParts } from '../hooks/useModelParts';
 import { useLibraryStore } from '../store/useLibraryStore';
+import { DEFAULT_PREVIEW_WIDTH, calculatePreviewHeight } from '../lib/previewDimensions';
 import type { FileRow } from '@shared/types';
 
 function ParsedModel({ url, ext }: { url: string; ext: FileRow['ext'] }): React.JSX.Element | null {
@@ -109,13 +110,24 @@ function HdriControls(): React.JSX.Element {
   );
 }
 
-export function ModelPreview({ file }: { file: FileRow }): React.JSX.Element {
+export function ModelPreview({
+  file,
+  width = DEFAULT_PREVIEW_WIDTH
+}: {
+  file: FileRow;
+  width?: number;
+}): React.JSX.Element {
   const url = useMemo(() => modelFileUrl(file.id, file.filename), [file.id, file.filename]);
   const hdriPath = useLibraryStore((state) => state.hdriPath);
   const hdriUrl = useMemo(() => (hdriPath ? hdriFileUrl(hdriPath) : null), [hdriPath]);
 
+  const previewHeight = calculatePreviewHeight(width);
+
   return (
-    <div className="relative h-64 w-full overflow-hidden rounded border border-neutral-800 bg-neutral-950">
+    <div
+      className="relative overflow-hidden rounded border border-neutral-800 bg-neutral-950"
+      style={{ width: '100%', height: previewHeight }}
+    >
       <ModelErrorBoundary key={file.id} fallback={<UnsupportedPlaceholder />}>
         <Canvas camera={{ position: [40, 40, 40], fov: 45 }}>
           {hdriUrl ? (

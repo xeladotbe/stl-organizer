@@ -2,9 +2,12 @@ import { useMemo, useState } from 'react'
 import { useLibraryStore } from '../store/useLibraryStore'
 import { ConfirmDialog } from './ConfirmDialog'
 import { formatSize } from '../lib/format'
+import { pickFileToKeep } from '../lib/pickFileToKeep'
 import type { FileRow } from '@shared/types'
 
-type TrashTarget = { type: 'file'; file: FileRow } | { type: 'keepFirst'; group: FileRow[] }
+type TrashTarget =
+  | { type: 'file'; file: FileRow }
+  | { type: 'keepFirst'; group: FileRow[]; keep: FileRow }
 
 export function DuplicatesView(): React.JSX.Element {
   const duplicates = useLibraryStore((state) => state.duplicates)
@@ -28,7 +31,7 @@ export function DuplicatesView(): React.JSX.Element {
 
   const handleKeepFirst = (group: FileRow[]): void => {
     if (group.length <= 1) return
-    setTrashTarget({ type: 'keepFirst', group })
+    setTrashTarget({ type: 'keepFirst', group, keep: pickFileToKeep(group) })
   }
 
   return (
@@ -89,7 +92,7 @@ export function DuplicatesView(): React.JSX.Element {
           title={
             trashTarget.type === 'file'
               ? `Move "${trashTarget.file.filename}" to the Recycle Bin?`
-              : `Move ${trashTarget.group.length - 1} duplicate(s) to the Recycle Bin, keeping "${trashTarget.group[0].filename}"?`
+              : `Move ${trashTarget.group.length - 1} duplicate(s) to the Recycle Bin, keeping "${trashTarget.keep.filename}"?`
           }
           description={trashTarget.type === 'file' ? trashTarget.file.path : undefined}
           confirmLabel="Move to Recycle Bin"
@@ -99,8 +102,9 @@ export function DuplicatesView(): React.JSX.Element {
             if (trashTarget.type === 'file') {
               void moveToTrash(trashTarget.file.id)
             } else {
-              const [, ...rest] = trashTarget.group
-              for (const file of rest) void moveToTrash(file.id)
+              for (const file of trashTarget.group) {
+                if (file.id !== trashTarget.keep.id) void moveToTrash(file.id)
+              }
             }
             setTrashTarget(null)
           }}

@@ -66,3 +66,93 @@ describe('FileList search field', () => {
     expect(screen.queryByLabelText('Clear search')).not.toBeInTheDocument();
   });
 });
+
+describe('FileList file count', () => {
+  it('shows singular "file" when there is exactly one file', () => {
+    useLibraryStore.setState({
+      files: [file],
+      filesLoading: false,
+      tags: [],
+      categories: [],
+      groups: [],
+      fileTagIds: new Map()
+    });
+
+    render(<FileList />);
+    expect(screen.getByText('1 file')).toBeInTheDocument();
+  });
+
+  it('shows plural "files" when there are multiple files', () => {
+    const file2 = { ...file, id: 2, filename: 'cup.stl', path: 'C:/models/cup.stl' };
+    useLibraryStore.setState({
+      files: [file, file2],
+      filesLoading: false,
+      tags: [],
+      categories: [],
+      groups: [],
+      fileTagIds: new Map()
+    });
+
+    render(<FileList />);
+    expect(screen.getByText('2 files')).toBeInTheDocument();
+  });
+
+  it('shows count of matching files when search filters results', async () => {
+    const file2 = { ...file, id: 2, filename: 'cup.stl', path: 'C:/models/cup.stl' };
+    useLibraryStore.setState({
+      files: [file, file2],
+      filesLoading: false,
+      tags: [],
+      categories: [],
+      groups: [],
+      fileTagIds: new Map()
+    });
+
+    const user = userEvent.setup();
+    render(<FileList />);
+
+    // Initially shows 2 files
+    expect(screen.getByText('2 files')).toBeInTheDocument();
+
+    // After searching for "vase", only 1 file matches
+    const input = screen.getByPlaceholderText('Search files…');
+    await user.type(input, 'vase');
+
+    expect(screen.getByText('1 file')).toBeInTheDocument();
+  });
+
+  it('hides count during loading state when library is empty', () => {
+    useLibraryStore.setState({
+      files: [],
+      filesLoading: true,
+      tags: [],
+      categories: [],
+      groups: [],
+      fileTagIds: new Map()
+    });
+
+    render(<FileList />);
+    expect(screen.queryByText(/^[\d]+ files?$/)).not.toBeInTheDocument();
+  });
+
+  it('shows count even when library has files, even if no files are visible from search', async () => {
+    const file2 = { ...file, id: 2, filename: 'cup.stl', path: 'C:/models/cup.stl' };
+    useLibraryStore.setState({
+      files: [file, file2],
+      filesLoading: false,
+      tags: [],
+      categories: [],
+      groups: [],
+      fileTagIds: new Map()
+    });
+
+    const user = userEvent.setup();
+    render(<FileList />);
+
+    const input = screen.getByPlaceholderText('Search files…');
+    await user.type(input, 'nonexistent');
+
+    // Should show 0 files since no matches
+    expect(screen.getByText('0 files')).toBeInTheDocument();
+  });
+});

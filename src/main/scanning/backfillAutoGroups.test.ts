@@ -1,16 +1,3 @@
-// @vitest-environment node
-//
-// This is the only test file in the suite that loads the real better-sqlite3 native addon (see
-// CLAUDE.md's Testing section - everything else is either pure logic or jsdom/testing-library
-// component tests). On the ubuntu-latest CI runner specifically (not reproduced on Windows),
-// running it under the suite's default global `jsdom` environment reliably crashes the whole
-// vitest worker fork with no in-test stack trace ("Worker exited unexpectedly") - consistent with
-// the native addon's dlopen/N-API initialization getting confused by running inside jsdom's
-// separate global/vm context rather than a plain Node one. Overriding just this file back to the
-// `node` environment avoids that. Safe to do per-file (rather than via environmentMatchGlobs)
-// because this file is a plain .ts file with no React/testing-library/user-event involvement, so
-// it can't reintroduce the stale-globalThis.document bug that ruled out per-file environments
-// project-wide (see CLAUDE.md).
 import Database from 'better-sqlite3'
 import { describe, expect, it } from 'vitest'
 import { runMigrations } from '../db'

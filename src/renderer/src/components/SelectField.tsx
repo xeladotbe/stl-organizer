@@ -1,8 +1,8 @@
-import { Select } from 'radix-ui'
+import { Select } from 'radix-ui';
 
 // Radix Select disallows an empty-string item value (it's reserved to mean "no selection"), so
 // the placeholder/"none" state is represented by this sentinel and mapped back to null here.
-const NONE = '__none__'
+const NONE = '__none__';
 
 export function SelectField({
   value,
@@ -10,10 +10,10 @@ export function SelectField({
   options,
   onChange
 }: {
-  value: string | null
-  placeholder: string
-  options: { value: string; label: string }[]
-  onChange: (value: string | null) => void
+  value: string | null;
+  placeholder: string;
+  options: { value: string; label: string }[];
+  onChange: (value: string | null) => void;
 }): React.JSX.Element {
   return (
     <Select.Root
@@ -51,5 +51,5 @@ export function SelectField({
         </Select.Content>
       </Select.Portal>
     </Select.Root>
-  )
+  );
 }

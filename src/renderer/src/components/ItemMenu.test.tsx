@@ -1,7 +1,7 @@
-import { describe, expect, it, vi } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
-import { ItemMenu, type MenuItem } from './ItemMenu'
+import { describe, expect, it, vi } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { ItemMenu, type MenuItem } from './ItemMenu';
 
 // Regression tests for issue #19: right-clicking a file opened a context menu that didn't close
 // on an outside click. The previous implementation hand-rolled `window.addEventListener('click', ...)`
@@ -19,44 +19,44 @@ function renderMenu(
   onClose: () => void,
   items: MenuItem[] = [{ label: 'Delete', danger: true, onClick: vi.fn() }]
 ): void {
-  const anchorEl = document.createElement('div')
-  document.body.appendChild(anchorEl)
-  render(<ItemMenu anchorEl={anchorEl} offsetX={0} offsetY={0} items={items} onClose={onClose} />)
+  const anchorEl = document.createElement('div');
+  document.body.appendChild(anchorEl);
+  render(<ItemMenu anchorEl={anchorEl} offsetX={0} offsetY={0} items={items} onClose={onClose} />);
 }
 
 describe('ItemMenu', () => {
   it('closes on an outside click immediately after opening, with no dead window before it can be dismissed', () => {
-    const onClose = vi.fn()
-    renderMenu(onClose)
+    const onClose = vi.fn();
+    renderMenu(onClose);
 
     // Deliberately synchronous - no `await`/timer flush. The old `setTimeout(0)`-deferred listener
     // attachment left a real window right after mount where a fast outside click was silently
     // dropped instead of closing the menu; this reproduces that window.
-    fireEvent.pointerDown(document.body)
-    fireEvent.click(document.body)
+    fireEvent.pointerDown(document.body);
+    fireEvent.click(document.body);
 
-    expect(onClose).toHaveBeenCalled()
-  })
+    expect(onClose).toHaveBeenCalled();
+  });
 
   it('closes and invokes the item action when a menu item is clicked', async () => {
-    const user = userEvent.setup()
-    const onClose = vi.fn()
-    const onClick = vi.fn()
-    renderMenu(onClose, [{ label: 'Ungroup', onClick }])
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    const onClick = vi.fn();
+    renderMenu(onClose, [{ label: 'Ungroup', onClick }]);
 
-    await user.click(screen.getByRole('button', { name: 'Ungroup' }))
+    await user.click(screen.getByRole('button', { name: 'Ungroup' }));
 
-    expect(onClick).toHaveBeenCalledOnce()
-    expect(onClose).toHaveBeenCalled()
-  })
+    expect(onClick).toHaveBeenCalledOnce();
+    expect(onClose).toHaveBeenCalled();
+  });
 
   it('closes on Escape', async () => {
-    const user = userEvent.setup()
-    const onClose = vi.fn()
-    renderMenu(onClose)
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    renderMenu(onClose);
 
-    await user.keyboard('{Escape}')
+    await user.keyboard('{Escape}');
 
-    expect(onClose).toHaveBeenCalled()
-  })
-})
+    expect(onClose).toHaveBeenCalled();
+  });
+});

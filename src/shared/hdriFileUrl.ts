@@ -1,6 +1,6 @@
-export const HDRI_FILE_SCHEME = 'hdri-file'
+export const HDRI_FILE_SCHEME = 'hdri-file';
 
-const HDRI_FILE_PREFIX = `${HDRI_FILE_SCHEME}://local/`
+const HDRI_FILE_PREFIX = `${HDRI_FILE_SCHEME}://local/`;
 
 /**
  * Builds a URL RGBELoader/EXRLoader (via drei's `<Environment>`) can `fetch()` for an arbitrary
@@ -12,10 +12,10 @@ const HDRI_FILE_PREFIX = `${HDRI_FILE_SCHEME}://local/`
  * escapes letters or dots.
  */
 export function hdriFileUrl(absolutePath: string): string {
-  return `${HDRI_FILE_PREFIX}${encodeURIComponent(absolutePath)}`
+  return `${HDRI_FILE_PREFIX}${encodeURIComponent(absolutePath)}`;
 }
 
 /** Inverse of `hdriFileUrl` - recovers the absolute path from a request URL in the main-process protocol handler. */
 export function parseHdriFileUrl(url: string): string {
-  return decodeURIComponent(url.slice(HDRI_FILE_PREFIX.length))
+  return decodeURIComponent(url.slice(HDRI_FILE_PREFIX.length));
 }

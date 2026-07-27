@@ -1,36 +1,36 @@
-import { useEffect, useState } from 'react'
-import type { WatchedFolderRow } from '@shared/types'
+import { useEffect, useState } from 'react';
+import type { WatchedFolderRow } from '@shared/types';
 
 export function SettingsApp(): React.JSX.Element {
-  const [folders, setFolders] = useState<WatchedFolderRow[]>([])
-  const [loading, setLoading] = useState(true)
+  const [folders, setFolders] = useState<WatchedFolderRow[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    let cancelled = false
+    let cancelled = false;
     void window.api.folders.list().then((result) => {
-      if (cancelled) return
-      setFolders(result)
-      setLoading(false)
-    })
+      if (cancelled) return;
+      setFolders(result);
+      setLoading(false);
+    });
     return () => {
-      cancelled = true
-    }
-  }, [])
+      cancelled = true;
+    };
+  }, []);
 
   const reload = async (): Promise<void> => {
-    setFolders(await window.api.folders.list())
-    setLoading(false)
-  }
+    setFolders(await window.api.folders.list());
+    setLoading(false);
+  };
 
   const handleAdd = async (): Promise<void> => {
-    const folder = await window.api.folders.add()
-    if (folder) await reload()
-  }
+    const folder = await window.api.folders.add();
+    if (folder) await reload();
+  };
 
   const handleRemove = async (id: number): Promise<void> => {
-    await window.api.folders.remove(id)
-    await reload()
-  }
+    await window.api.folders.remove(id);
+    await reload();
+  };
 
   return (
     <div className="flex h-full flex-col bg-neutral-950 text-neutral-100">
@@ -70,5 +70,5 @@ export function SettingsApp(): React.JSX.Element {
         )}
       </ul>
     </div>
-  )
+  );
 }

@@ -1,71 +1,73 @@
-import { useEffect, useMemo, useState } from 'react'
-import { ToggleGroup } from 'radix-ui'
-import { useLibraryStore } from '../store/useLibraryStore'
-import { FileTable } from './FileTable'
-import { FileGrid } from './FileGrid'
-import { toDisplayItems } from '../lib/groupFiles'
-import { parseSearchQuery, createTextMatcher } from '../lib/searchQuery'
+import { useEffect, useMemo, useState } from 'react';
+import { ToggleGroup } from 'radix-ui';
+import { useLibraryStore } from '../store/useLibraryStore';
+import { FileTable } from './FileTable';
+import { FileGrid } from './FileGrid';
+import { toDisplayItems } from '../lib/groupFiles';
+import { parseSearchQuery, createTextMatcher } from '../lib/searchQuery';
 
-type DisplayMode = 'list' | 'grid'
+type DisplayMode = 'list' | 'grid';
 
-const DISPLAY_MODE_STORAGE_KEY = 'stl-organizer:displayMode'
+const DISPLAY_MODE_STORAGE_KEY = 'stl-organizer:displayMode';
 
 function loadStoredDisplayMode(): DisplayMode {
-  const stored = localStorage.getItem(DISPLAY_MODE_STORAGE_KEY)
-  return stored === 'grid' ? 'grid' : 'list'
+  const stored = localStorage.getItem(DISPLAY_MODE_STORAGE_KEY);
+  return stored === 'grid' ? 'grid' : 'list';
 }
 
 export function FileList(): React.JSX.Element {
-  const files = useLibraryStore((state) => state.files)
-  const filesLoading = useLibraryStore((state) => state.filesLoading)
-  const tags = useLibraryStore((state) => state.tags)
-  const fileTagIds = useLibraryStore((state) => state.fileTagIds)
-  const categories = useLibraryStore((state) => state.categories)
-  const groups = useLibraryStore((state) => state.groups)
-  const search = useLibraryStore((state) => state.searchQuery)
-  const setSearch = useLibraryStore((state) => state.setSearchQuery)
-  const [displayMode, setDisplayMode] = useState<DisplayMode>(loadStoredDisplayMode)
+  const files = useLibraryStore((state) => state.files);
+  const filesLoading = useLibraryStore((state) => state.filesLoading);
+  const tags = useLibraryStore((state) => state.tags);
+  const fileTagIds = useLibraryStore((state) => state.fileTagIds);
+  const categories = useLibraryStore((state) => state.categories);
+  const groups = useLibraryStore((state) => state.groups);
+  const search = useLibraryStore((state) => state.searchQuery);
+  const setSearch = useLibraryStore((state) => state.setSearchQuery);
+  const [displayMode, setDisplayMode] = useState<DisplayMode>(loadStoredDisplayMode);
 
   useEffect(() => {
-    localStorage.setItem(DISPLAY_MODE_STORAGE_KEY, displayMode)
-  }, [displayMode])
+    localStorage.setItem(DISPLAY_MODE_STORAGE_KEY, displayMode);
+  }, [displayMode]);
 
-  const groupById = useMemo(() => new Map(groups.map((group) => [group.id, group])), [groups])
+  const groupById = useMemo(() => new Map(groups.map((group) => [group.id, group])), [groups]);
 
   const visibleFiles = useMemo(() => {
-    const { textTokens, tagTokens, categoryTokens, typeTokens } = parseSearchQuery(search)
+    const { textTokens, tagTokens, categoryTokens, typeTokens } = parseSearchQuery(search);
     if (
       textTokens.length === 0 &&
       tagTokens.length === 0 &&
       categoryTokens.length === 0 &&
       typeTokens.length === 0
     ) {
-      return files
+      return files;
     }
 
-    const textMatchersByToken = textTokens.map((token) => createTextMatcher(token))
+    const textMatchersByToken = textTokens.map((token) => createTextMatcher(token));
     const tagIdSetsByToken = tagTokens.map((token) => {
-      const matches = createTextMatcher(token)
-      return new Set(tags.filter((tag) => matches(tag.name.toLowerCase())).map((tag) => tag.id))
-    })
+      const matches = createTextMatcher(token);
+      return new Set(tags.filter((tag) => matches(tag.name.toLowerCase())).map((tag) => tag.id));
+    });
     const categoryIdSetsByToken = categoryTokens.map((token) => {
-      const matches = createTextMatcher(token)
+      const matches = createTextMatcher(token);
       return new Set(
-        categories.filter((category) => matches(category.name.toLowerCase())).map((category) => category.id)
-      )
-    })
-    const typeMatchersByToken = typeTokens.map((token) => createTextMatcher(token))
+        categories
+          .filter((category) => matches(category.name.toLowerCase()))
+          .map((category) => category.id)
+      );
+    });
+    const typeMatchersByToken = typeTokens.map((token) => createTextMatcher(token));
 
     return files.filter((file) => {
-      const group = file.group_id != null ? groupById.get(file.group_id) : undefined
+      const group = file.group_id != null ? groupById.get(file.group_id) : undefined;
 
       if (textMatchersByToken.length > 0) {
-        const filenameLower = file.filename.toLowerCase()
-        const groupNameLower = group?.name.toLowerCase() ?? ''
+        const filenameLower = file.filename.toLowerCase();
+        const groupNameLower = group?.name.toLowerCase() ?? '';
         const matchesText = textMatchersByToken.every(
           (matches) => matches(filenameLower) || matches(groupNameLower)
-        )
-        if (!matchesText) return false
+        );
+        if (!matchesText) return false;
       }
 
       if (categoryIdSetsByToken.length > 0) {
@@ -73,29 +75,29 @@ export function FileList(): React.JSX.Element {
           (idSet) =>
             (file.category_id != null && idSet.has(file.category_id)) ||
             (group?.category_id != null && idSet.has(group.category_id))
-        )
-        if (!matchesCategory) return false
+        );
+        if (!matchesCategory) return false;
       }
 
       if (tagIdSetsByToken.length > 0) {
-        const fileTags = fileTagIds.get(file.id) ?? []
+        const fileTags = fileTagIds.get(file.id) ?? [];
         const matchesTags = tagIdSetsByToken.every((idSet) =>
           fileTags.some((tagId) => idSet.has(tagId))
-        )
-        if (!matchesTags) return false
+        );
+        if (!matchesTags) return false;
       }
 
       if (typeMatchersByToken.length > 0) {
-        const effectiveType = group != null ? 'virtual' : file.ext.toLowerCase()
-        const matchesType = typeMatchersByToken.every((matches) => matches(effectiveType))
-        if (!matchesType) return false
+        const effectiveType = group != null ? 'virtual' : file.ext.toLowerCase();
+        const matchesType = typeMatchersByToken.every((matches) => matches(effectiveType));
+        if (!matchesType) return false;
       }
 
-      return true
-    })
-  }, [files, search, tags, categories, fileTagIds, groupById])
+      return true;
+    });
+  }, [files, search, tags, categories, fileTagIds, groupById]);
 
-  const displayItems = useMemo(() => toDisplayItems(visibleFiles, groups), [visibleFiles, groups])
+  const displayItems = useMemo(() => toDisplayItems(visibleFiles, groups), [visibleFiles, groups]);
 
   return (
     <main className="flex flex-1 flex-col overflow-hidden">
@@ -156,5 +158,5 @@ export function FileList(): React.JSX.Element {
         )}
       </div>
     </main>
-  )
+  );
 }

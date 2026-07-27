@@ -1,6 +1,6 @@
-import { resolve } from 'path'
-import react from '@vitejs/plugin-react'
-import { defineConfig } from 'vitest/config'
+import { resolve } from 'path';
+import react from '@vitejs/plugin-react';
+import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   plugins: [react()],
@@ -20,4 +20,4 @@ export default defineConfig({
     setupFiles: ['./vitest.setup.ts'],
     include: ['src/**/*.test.ts', 'src/**/*.test.tsx']
   }
-})
+});

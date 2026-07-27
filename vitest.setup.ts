@@ -1,26 +1,26 @@
-import { afterEach } from 'vitest'
-import { cleanup } from '@testing-library/react'
-import '@testing-library/jest-dom/vitest'
+import { afterEach } from 'vitest';
+import { cleanup } from '@testing-library/react';
+import '@testing-library/jest-dom/vitest';
 
 // React Testing Library's automatic afterEach(cleanup) relies on detecting a global test
 // framework; since this project doesn't enable vitest's `globals: true`, it must be registered
 // explicitly - otherwise DOM from one test leaks into the next within the same file.
-afterEach(cleanup)
+afterEach(cleanup);
 
 // Radix UI's pointer-based interactions (Select, Dialog, etc.) call browser APIs jsdom doesn't
 // implement - without these stubs, component tests exercising Radix primitives throw "not a
 // function" errors that have nothing to do with the behavior actually under test.
 if (!Element.prototype.hasPointerCapture) {
-  Element.prototype.hasPointerCapture = (): boolean => false
+  Element.prototype.hasPointerCapture = (): boolean => false;
 }
 if (!Element.prototype.setPointerCapture) {
-  Element.prototype.setPointerCapture = (): void => {}
+  Element.prototype.setPointerCapture = (): void => {};
 }
 if (!Element.prototype.releasePointerCapture) {
-  Element.prototype.releasePointerCapture = (): void => {}
+  Element.prototype.releasePointerCapture = (): void => {};
 }
 if (!Element.prototype.scrollIntoView) {
-  Element.prototype.scrollIntoView = (): void => {}
+  Element.prototype.scrollIntoView = (): void => {};
 }
 
 if (typeof globalThis.ResizeObserver === 'undefined') {
@@ -34,5 +34,5 @@ if (typeof globalThis.ResizeObserver === 'undefined') {
     // eslint-disable-next-line @typescript-eslint/no-empty-function
     disconnect(): void {}
   }
-  globalThis.ResizeObserver = ResizeObserverStub as unknown as typeof ResizeObserver
+  globalThis.ResizeObserver = ResizeObserverStub as unknown as typeof ResizeObserver;
 }

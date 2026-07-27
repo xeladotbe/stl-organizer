@@ -1,35 +1,35 @@
-import { useMemo, useState } from 'react'
-import { useLibraryStore } from '../store/useLibraryStore'
-import { ConfirmDialog } from './ConfirmDialog'
-import { formatSize } from '../lib/format'
-import type { FileRow } from '@shared/types'
+import { useMemo, useState } from 'react';
+import { useLibraryStore } from '../store/useLibraryStore';
+import { ConfirmDialog } from './ConfirmDialog';
+import { formatSize } from '../lib/format';
+import type { FileRow } from '@shared/types';
 
-type TrashTarget = { type: 'file'; file: FileRow } | { type: 'keepFirst'; group: FileRow[] }
+type TrashTarget = { type: 'file'; file: FileRow } | { type: 'keepFirst'; group: FileRow[] };
 
 export function DuplicatesView(): React.JSX.Element {
-  const duplicates = useLibraryStore((state) => state.duplicates)
-  const duplicatesLoading = useLibraryStore((state) => state.duplicatesLoading)
-  const moveToTrash = useLibraryStore((state) => state.moveToTrash)
-  const selectFile = useLibraryStore((state) => state.selectFile)
-  const [trashTarget, setTrashTarget] = useState<TrashTarget | null>(null)
+  const duplicates = useLibraryStore((state) => state.duplicates);
+  const duplicatesLoading = useLibraryStore((state) => state.duplicatesLoading);
+  const moveToTrash = useLibraryStore((state) => state.moveToTrash);
+  const selectFile = useLibraryStore((state) => state.selectFile);
+  const [trashTarget, setTrashTarget] = useState<TrashTarget | null>(null);
 
   const groups = useMemo(() => {
-    const map = new Map<string, FileRow[]>()
+    const map = new Map<string, FileRow[]>();
     for (const file of duplicates) {
-      if (!file.content_hash) continue
-      const list = map.get(file.content_hash) ?? []
-      list.push(file)
-      map.set(file.content_hash, list)
+      if (!file.content_hash) continue;
+      const list = map.get(file.content_hash) ?? [];
+      list.push(file);
+      map.set(file.content_hash, list);
     }
-    return [...map.values()]
-  }, [duplicates])
+    return [...map.values()];
+  }, [duplicates]);
 
-  const handleTrash = (file: FileRow): void => setTrashTarget({ type: 'file', file })
+  const handleTrash = (file: FileRow): void => setTrashTarget({ type: 'file', file });
 
   const handleKeepFirst = (group: FileRow[]): void => {
-    if (group.length <= 1) return
-    setTrashTarget({ type: 'keepFirst', group })
-  }
+    if (group.length <= 1) return;
+    setTrashTarget({ type: 'keepFirst', group });
+  };
 
   return (
     <main className="flex flex-1 flex-col overflow-hidden">
@@ -97,15 +97,15 @@ export function DuplicatesView(): React.JSX.Element {
           onCancel={() => setTrashTarget(null)}
           onConfirm={() => {
             if (trashTarget.type === 'file') {
-              void moveToTrash(trashTarget.file.id)
+              void moveToTrash(trashTarget.file.id);
             } else {
-              const [, ...rest] = trashTarget.group
-              for (const file of rest) void moveToTrash(file.id)
+              const [, ...rest] = trashTarget.group;
+              for (const file of rest) void moveToTrash(file.id);
             }
-            setTrashTarget(null)
+            setTrashTarget(null);
           }}
         />
       )}
     </main>
-  )
+  );
 }

@@ -1,21 +1,21 @@
-import { useEffect } from 'react'
-import { Tabs } from 'radix-ui'
-import { useLibraryStore, type LibraryView } from './store/useLibraryStore'
-import { FileList } from './components/FileList'
-import { DuplicatesView } from './components/DuplicatesView'
-import { DetailPane } from './components/DetailPane'
+import { useEffect } from 'react';
+import { Tabs } from 'radix-ui';
+import { useLibraryStore, type LibraryView } from './store/useLibraryStore';
+import { FileList } from './components/FileList';
+import { DuplicatesView } from './components/DuplicatesView';
+import { DetailPane } from './components/DetailPane';
 
 function App(): React.JSX.Element {
-  const init = useLibraryStore((state) => state.init)
-  const view = useLibraryStore((state) => state.view)
-  const setView = useLibraryStore((state) => state.setView)
+  const init = useLibraryStore((state) => state.init);
+  const view = useLibraryStore((state) => state.view);
+  const setView = useLibraryStore((state) => state.setView);
   const duplicateGroupCount = useLibraryStore(
     (state) => new Set(state.duplicates.map((file) => file.content_hash)).size
-  )
+  );
 
   useEffect(() => {
-    init()
-  }, [init])
+    init();
+  }, [init]);
 
   return (
     <div className="flex h-full bg-neutral-950 text-neutral-100">
@@ -52,7 +52,7 @@ function App(): React.JSX.Element {
       </Tabs.Root>
       <DetailPane />
     </div>
-  )
+  );
 }
 
-export default App
+export default App;

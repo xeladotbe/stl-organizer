@@ -1,27 +1,27 @@
-import { Component, Suspense, useEffect, useMemo, type ReactNode } from 'react'
-import { Canvas } from '@react-three/fiber'
-import { Bounds, Environment, OrbitControls, useBounds } from '@react-three/drei'
-import { modelFileUrl } from '@shared/modelFileUrl'
-import { hdriFileUrl } from '@shared/hdriFileUrl'
-import { useModelParts } from '../hooks/useModelParts'
-import { useLibraryStore } from '../store/useLibraryStore'
-import type { FileRow } from '@shared/types'
+import { Component, Suspense, useEffect, useMemo, type ReactNode } from 'react';
+import { Canvas } from '@react-three/fiber';
+import { Bounds, Environment, OrbitControls, useBounds } from '@react-three/drei';
+import { modelFileUrl } from '@shared/modelFileUrl';
+import { hdriFileUrl } from '@shared/hdriFileUrl';
+import { useModelParts } from '../hooks/useModelParts';
+import { useLibraryStore } from '../store/useLibraryStore';
+import type { FileRow } from '@shared/types';
 
 function ParsedModel({ url, ext }: { url: string; ext: FileRow['ext'] }): React.JSX.Element | null {
-  const { parts, error } = useModelParts(url, ext)
-  const bounds = useBounds()
+  const { parts, error } = useModelParts(url, ext);
+  const bounds = useBounds();
 
   // `Bounds`' own auto-fit runs once on <Canvas> mount, keyed off canvas size — not off when
   // this async-loaded geometry actually shows up. It fires before the worker has resolved
   // anything, sees an empty scene, and frames a meaningless default box. Refit for real once the
   // parsed mesh is actually in the scene graph.
   useEffect(() => {
-    if (parts) bounds.refresh().fit().clip()
-  }, [parts, bounds])
+    if (parts) bounds.refresh().fit().clip();
+  }, [parts, bounds]);
 
   // Thrown during render (not inside an effect/callback), so ModelErrorBoundary below catches it.
-  if (error) throw new Error('failed to parse model')
-  if (!parts) return null
+  if (error) throw new Error('failed to parse model');
+  if (!parts) return null;
 
   return (
     <>
@@ -36,31 +36,31 @@ function ParsedModel({ url, ext }: { url: string; ext: FileRow['ext'] }): React.
         </mesh>
       ))}
     </>
-  )
+  );
 }
 
 interface ErrorBoundaryProps {
-  children: ReactNode
-  fallback: ReactNode
+  children: ReactNode;
+  fallback: ReactNode;
 }
 
 interface ErrorBoundaryState {
-  hasError: boolean
+  hasError: boolean;
 }
 
 class ModelErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
-  state: ErrorBoundaryState = { hasError: false }
+  state: ErrorBoundaryState = { hasError: false };
 
   static getDerivedStateFromError(): ErrorBoundaryState {
-    return { hasError: true }
+    return { hasError: true };
   }
 
   componentDidCatch(error: unknown): void {
-    console.error('[preview] failed to load model', error)
+    console.error('[preview] failed to load model', error);
   }
 
   render(): ReactNode {
-    return this.state.hasError ? this.props.fallback : this.props.children
+    return this.state.hasError ? this.props.fallback : this.props.children;
   }
 }
 
@@ -69,33 +69,33 @@ function UnsupportedPlaceholder(): React.JSX.Element {
     <div className="flex h-full items-center justify-center text-xs text-neutral-500">
       Preview unavailable
     </div>
-  )
+  );
 }
 
 // Separate from ModelErrorBoundary: a bad/missing HDRI file should fall back to the default
 // lighting rig, not hide the whole model behind "Preview unavailable". Clearing `hdriPath` makes
 // ModelPreview re-render onto the default-lighting branch instead of retrying the same URL.
 class HdriErrorBoundary extends Component<{ children: ReactNode }, ErrorBoundaryState> {
-  state: ErrorBoundaryState = { hasError: false }
+  state: ErrorBoundaryState = { hasError: false };
 
   static getDerivedStateFromError(): ErrorBoundaryState {
-    return { hasError: true }
+    return { hasError: true };
   }
 
   componentDidCatch(error: unknown): void {
-    console.error('[preview] failed to load HDRI, falling back to default lighting', error)
-    useLibraryStore.getState().clearHdri()
+    console.error('[preview] failed to load HDRI, falling back to default lighting', error);
+    useLibraryStore.getState().clearHdri();
   }
 
   render(): ReactNode {
-    return this.state.hasError ? null : this.props.children
+    return this.state.hasError ? null : this.props.children;
   }
 }
 
 function HdriControls(): React.JSX.Element {
-  const hdriPath = useLibraryStore((state) => state.hdriPath)
-  const pickHdri = useLibraryStore((state) => state.pickHdri)
-  const clearHdri = useLibraryStore((state) => state.clearHdri)
+  const hdriPath = useLibraryStore((state) => state.hdriPath);
+  const pickHdri = useLibraryStore((state) => state.pickHdri);
+  const clearHdri = useLibraryStore((state) => state.clearHdri);
 
   return (
     <button
@@ -106,13 +106,13 @@ function HdriControls(): React.JSX.Element {
     >
       {hdriPath ? 'HDRI ✕' : 'HDRI…'}
     </button>
-  )
+  );
 }
 
 export function ModelPreview({ file }: { file: FileRow }): React.JSX.Element {
-  const url = useMemo(() => modelFileUrl(file.id, file.filename), [file.id, file.filename])
-  const hdriPath = useLibraryStore((state) => state.hdriPath)
-  const hdriUrl = useMemo(() => (hdriPath ? hdriFileUrl(hdriPath) : null), [hdriPath])
+  const url = useMemo(() => modelFileUrl(file.id, file.filename), [file.id, file.filename]);
+  const hdriPath = useLibraryStore((state) => state.hdriPath);
+  const hdriUrl = useMemo(() => (hdriPath ? hdriFileUrl(hdriPath) : null), [hdriPath]);
 
   return (
     <div className="relative h-64 w-full overflow-hidden rounded border border-neutral-800 bg-neutral-950">
@@ -138,5 +138,5 @@ export function ModelPreview({ file }: { file: FileRow }): React.JSX.Element {
       </ModelErrorBoundary>
       <HdriControls />
     </div>
-  )
+  );
 }

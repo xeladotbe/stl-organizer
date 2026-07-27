@@ -1,4 +1,5 @@
-export type ComboOption = { type: 'existing'; id: number; name: string } | { type: 'create'; name: string }
+export type ComboOption =
+  { type: 'existing'; id: number; name: string } | { type: 'create'; name: string };
 
 /**
  * Builds the dropdown options for a typeahead combobox: existing suggestions matching `query`
@@ -10,15 +11,19 @@ export function buildComboOptions(
   suggestions: { id: number; name: string }[],
   query: string
 ): ComboOption[] {
-  const trimmed = query.trim()
+  const trimmed = query.trim();
   const filtered = trimmed
     ? suggestions.filter((s) => s.name.toLowerCase().includes(trimmed.toLowerCase()))
-    : suggestions
+    : suggestions;
 
-  const options: ComboOption[] = filtered.map((s) => ({ type: 'existing', id: s.id, name: s.name }))
+  const options: ComboOption[] = filtered.map((s) => ({
+    type: 'existing',
+    id: s.id,
+    name: s.name
+  }));
 
-  const hasExactMatch = filtered.some((s) => s.name.toLowerCase() === trimmed.toLowerCase())
-  if (trimmed && !hasExactMatch) options.push({ type: 'create', name: trimmed })
+  const hasExactMatch = filtered.some((s) => s.name.toLowerCase() === trimmed.toLowerCase());
+  if (trimmed && !hasExactMatch) options.push({ type: 'create', name: trimmed });
 
-  return options
+  return options;
 }

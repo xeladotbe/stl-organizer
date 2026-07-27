@@ -1,4 +1,12 @@
-import { Component, Suspense, useEffect, useMemo, useState, type ReactNode } from 'react';
+import {
+  Component,
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode
+} from 'react';
 import { Canvas } from '@react-three/fiber';
 import { Bounds, Environment, OrbitControls, useBounds } from '@react-three/drei';
 import { modelFileUrl } from '@shared/modelFileUrl';
@@ -98,6 +106,63 @@ class HdriErrorBoundary extends Component<{ children: ReactNode }, ErrorBoundary
   }
 }
 
+function DefaultLights(): React.JSX.Element {
+  return (
+    <>
+      <ambientLight intensity={0.6} />
+      <directionalLight position={[5, 8, 5]} intensity={0.8} />
+    </>
+  );
+}
+
+// A sibling of <Environment>, inside the *same* Suspense boundary — Suspense treats its whole
+// subtree as one atomic unit, so this only mounts (and fires its effect) once Environment's own
+// texture load has actually resolved, never before. That gives ModelPreview a precise "HDRI is
+// ready" signal without having to reimplement any of drei's Environment/useEnvironment internals
+// (there's no onLoad prop to hook into directly).
+function HdriReadySignal({ onReady }: { onReady: () => void }): null {
+  useEffect(() => {
+    onReady();
+  }, [onReady]);
+  return null;
+}
+
+// @react-three/fiber wraps a <Canvas>'s entire children tree in one Suspense boundary of its own
+// (see `CanvasImpl` in @react-three/fiber — anything that suspends without being caught by a
+// nested boundary bubbles out to a `Block` that suspends the whole <Canvas> host component).
+// Mounting the HDRI's own Suspense boundary in the very same commit as the rest of the scene
+// risks that first commit — which also contains the parsed model mesh — getting held back until
+// the HDRI resolves, even though the two are otherwise unrelated (see issue #58). Deferring this
+// subtree's mount to a follow-up render, after the model's own first paint has already committed
+// on its own, guarantees the model is never gated behind it: at the moment of that very first
+// commit there is no Suspense-bearing content in the tree at all yet.
+function HdriEnvironment({
+  hdriUrl,
+  onReady
+}: {
+  hdriUrl: string;
+  onReady: () => void;
+}): React.JSX.Element | null {
+  const [deferred, setDeferred] = useState(false);
+  // Deliberate exception to react-hooks/set-state-in-effect: that rule exists for state that's
+  // redundant with something already known during render, which isn't the case here — the whole
+  // point is to distinguish the very first commit from any later one, which is only observable
+  // from an effect (an effect body, by definition, only runs after a commit has already happened).
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => setDeferred(true), []);
+
+  if (!deferred) return null;
+
+  return (
+    <HdriErrorBoundary>
+      <Suspense fallback={null}>
+        <Environment files={hdriUrl} />
+        <HdriReadySignal onReady={onReady} />
+      </Suspense>
+    </HdriErrorBoundary>
+  );
+}
+
 function HdriControls(): React.JSX.Element {
   const hdriPath = useLibraryStore((state) => state.hdriPath);
   const pickHdri = useLibraryStore((state) => state.pickHdri);
@@ -132,6 +197,19 @@ export function ModelPreview({
   const [erroredFileId, setErroredFileId] = useState<number | null>(null);
   const hasModelError = erroredFileId === file.id;
 
+  // Whether the current `hdriUrl` has actually finished loading (see HdriEnvironment/
+  // HdriReadySignal above). `hdriReady` is reset "adjusted during render" whenever `hdriUrl`
+  // itself changes, rather than via an effect (see rerender-derived-state-no-effect) — this is
+  // the React-documented pattern for resetting state when a prop changes, and correctly covers
+  // every transition (on -> off, off -> on, on -> a different file), not just "different URL".
+  const [hdriReady, setHdriReady] = useState(false);
+  const [prevHdriUrl, setPrevHdriUrl] = useState(hdriUrl);
+  if (hdriUrl !== prevHdriUrl) {
+    setPrevHdriUrl(hdriUrl);
+    setHdriReady(false);
+  }
+  const handleHdriReady = useCallback(() => setHdriReady(true), []);
+
   const previewHeight = calculatePreviewHeight(width);
 
   return (
@@ -147,16 +225,12 @@ export function ModelPreview({
           actually needs a per-file reset (ParsedModel, keyed by `url` below) fixes that. */}
       <Canvas camera={{ position: [40, 40, 40], fov: 45 }}>
         {hdriUrl ? (
-          <HdriErrorBoundary key={hdriUrl}>
-            <Suspense fallback={null}>
-              <Environment files={hdriUrl} />
-            </Suspense>
-          </HdriErrorBoundary>
-        ) : (
           <>
-            <ambientLight intensity={0.6} />
-            <directionalLight position={[5, 8, 5]} intensity={0.8} />
+            {!hdriReady && <DefaultLights />}
+            <HdriEnvironment key={hdriUrl} hdriUrl={hdriUrl} onReady={handleHdriReady} />
           </>
+        ) : (
+          <DefaultLights />
         )}
         <Bounds fit clip observe margin={1.3}>
           {/* `fallback={null}`: a DOM node can't be a child of <Canvas>. The actual "Preview

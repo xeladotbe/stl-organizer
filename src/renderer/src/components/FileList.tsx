@@ -140,6 +140,11 @@ export function FileList(): React.JSX.Element {
               Grid
             </ToggleGroup.Item>
           </ToggleGroup.Root>
+          {files.length > 0 && (
+            <div className="ml-auto text-sm text-neutral-500">
+              {visibleFiles.length} {visibleFiles.length === 1 ? 'file' : 'files'}
+            </div>
+          )}
         </div>
       </div>
       <div className="flex-1 overflow-hidden">

@@ -100,12 +100,24 @@ export function FileList(): React.JSX.Element {
     <main className="flex flex-1 flex-col overflow-hidden">
       <div className="border-b border-neutral-800 px-4 py-3">
         <div className="flex items-center gap-2">
-          <input
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search files…"
-            className="w-full max-w-sm rounded border border-neutral-700 bg-neutral-900 px-3 py-1.5 text-sm text-neutral-100 placeholder:text-neutral-500 focus:border-neutral-500 focus:outline-none"
-          />
+          <div className="relative w-full max-w-sm">
+            <input
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search files…"
+              className="w-full rounded border border-neutral-700 bg-neutral-900 px-3 py-1.5 pr-7 text-sm text-neutral-100 placeholder:text-neutral-500 focus:border-neutral-500 focus:outline-none"
+            />
+            {search.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setSearch('')}
+                aria-label="Clear search"
+                className="absolute inset-y-0 right-0 flex items-center px-2 text-neutral-500 hover:text-neutral-300"
+              >
+                ✕
+              </button>
+            )}
+          </div>
           <ToggleGroup.Root
             type="single"
             value={displayMode}

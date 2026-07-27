@@ -74,12 +74,14 @@ function CategoryPicker({
   categories,
   value,
   onChange,
-  onCreate
+  onCreate,
+  onFilterByCategory
 }: {
   categories: CategoryRow[]
   value: number | null
   onChange: (id: number | null) => void
   onCreate: (name: string) => Promise<CategoryRow | undefined>
+  onFilterByCategory: (name: string) => void
 }): React.JSX.Element {
   const current = value != null ? categories.find((category) => category.id === value) : undefined
   const suggestions = categories.filter((category) => category.id !== value)
@@ -100,6 +102,7 @@ function CategoryPicker({
       onRemove={() => onChange(null)}
       onSelectExisting={(id) => onChange(id)}
       onCreateNew={handleCreate}
+      onChipClick={() => current && onFilterByCategory(current.name)}
     />
   )
 }
@@ -108,12 +111,14 @@ function TagPicker({
   tags,
   assignedIds,
   onToggle,
-  onCreate
+  onCreate,
+  onFilterByTag
 }: {
   tags: TagRow[]
   assignedIds: number[]
   onToggle: (id: number) => void
   onCreate: (name: string) => Promise<TagRow | undefined>
+  onFilterByTag: (name: string) => void
 }): React.JSX.Element {
   // Chips follow `assignedIds`' own order (how the tags were actually added to this file), not
   // `tags`' alphabetical order - filtering the alphabetical list would re-sort the chips instead.
@@ -137,6 +142,10 @@ function TagPicker({
       onRemove={onToggle}
       onSelectExisting={onToggle}
       onCreateNew={handleCreate}
+      onChipClick={(id) => {
+        const tag = tagById.get(id)
+        if (tag) onFilterByTag(tag.name)
+      }}
     />
   )
 }
@@ -162,8 +171,12 @@ export function DetailPane(): React.JSX.Element | null {
   const moveToTrash = useLibraryStore((state) => state.moveToTrash)
   const createTag = useLibraryStore((state) => state.createTag)
   const createCategory = useLibraryStore((state) => state.createCategory)
+  const addSearchToken = useLibraryStore((state) => state.addSearchToken)
 
   const [trashTarget, setTrashTarget] = useState<FileRow | null>(null)
+
+  const filterByTag = (name: string): void => addSearchToken(`tag:${name}`)
+  const filterByCategory = (name: string): void => addSearchToken(`category:${name}`)
 
   if (!selection) return null
 
@@ -204,6 +217,7 @@ export function DetailPane(): React.JSX.Element | null {
               value={group.category_id}
               onChange={(id) => void setGroupCategory(group.id, id)}
               onCreate={createCategory}
+              onFilterByCategory={filterByCategory}
             />
           </div>
 
@@ -354,6 +368,7 @@ export function DetailPane(): React.JSX.Element | null {
           value={file.category_id}
           onChange={(id) => void setFileCategory(file.id, id)}
           onCreate={createCategory}
+          onFilterByCategory={filterByCategory}
         />
       </div>
 
@@ -364,6 +379,7 @@ export function DetailPane(): React.JSX.Element | null {
           assignedIds={assignedTagIds}
           onToggle={toggleTag}
           onCreate={createTag}
+          onFilterByTag={filterByTag}
         />
       </div>
     </aside>

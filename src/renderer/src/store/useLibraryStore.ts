@@ -8,6 +8,7 @@ import type {
   FileTagLink,
   ModelGroupRow
 } from '@shared/types'
+import { insertSearchToken } from '../lib/searchQuery'
 
 export type LibraryView = 'all' | 'duplicates'
 
@@ -31,6 +32,7 @@ interface LibraryState {
   selectionAnchorId: number | null
   scanProgress: Record<number, ScanProgressEvent>
   view: LibraryView
+  searchQuery: string
   hdriPath: string | null
   foldersLoading: boolean
   filesLoading: boolean
@@ -53,6 +55,8 @@ interface LibraryState {
   selectFileRange: (orderedIds: number[], toId: number) => void
   clearFileSelection: () => void
   setView: (view: LibraryView) => void
+  setSearchQuery: (query: string) => void
+  addSearchToken: (token: string) => void
   pickHdri: () => Promise<void>
   clearHdri: () => void
   moveToTrash: (id: number) => Promise<void>
@@ -100,6 +104,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   selectionAnchorId: null,
   scanProgress: {},
   view: 'all',
+  searchQuery: '',
   hdriPath: localStorage.getItem(HDRI_STORAGE_KEY),
   foldersLoading: false,
   filesLoading: false,
@@ -239,6 +244,14 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   clearFileSelection: () => set({ selectedFileIds: new Set(), selectionAnchorId: null }),
 
   setView: (view) => set({ view }),
+
+  setSearchQuery: (query) => set({ searchQuery: query }),
+
+  // Used when a tag/category badge (list row, or a chip in the detail pane) is clicked - narrows
+  // the list to that tag/category without discarding whatever the user already typed, and jumps
+  // to the "All files" view since that's the only view the search field actually filters.
+  addSearchToken: (token) =>
+    set((state) => ({ view: 'all', searchQuery: insertSearchToken(state.searchQuery, token) })),
 
   pickHdri: async () => {
     const path = await window.api.app.pickHdriFile()

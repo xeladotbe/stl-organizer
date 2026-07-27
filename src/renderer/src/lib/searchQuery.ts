@@ -43,6 +43,20 @@ export function createTextMatcher(token: string): TextMatcher {
   return (value: string) => value.includes(token)
 }
 
+/** Appends a `tag:name`/`category:name` token (e.g. from clicking a badge) to an existing search
+ * query, rather than replacing whatever the user already typed - so clicking a second badge
+ * narrows the results further instead of discarding the first filter. A no-op (returns the
+ * trimmed query unchanged) if that exact token is already present, case-insensitively, so
+ * repeated clicks don't pile up duplicate tokens. */
+export function insertSearchToken(query: string, token: string): string {
+  const trimmed = query.trim()
+  const existingTokens = trimmed.split(/\s+/).filter(Boolean)
+  if (existingTokens.some((existing) => existing.toLowerCase() === token.toLowerCase())) {
+    return trimmed
+  }
+  return trimmed ? `${trimmed} ${token}` : token
+}
+
 /** Splits a search query into plain filename/group-name tokens, `tag:name`, `category:name` and
  * `type:virtual|stl|3mf|obj` tokens. */
 export function parseSearchQuery(query: string): ParsedSearchQuery {

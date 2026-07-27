@@ -90,26 +90,44 @@ function buildVirtualRows(items: DisplayItem[]): VirtualRow[] {
 function LabelBadges({
   categoryName,
   tagNames,
-  isDuplicate
+  isDuplicate,
+  onCategoryClick,
+  onTagClick
 }: {
   categoryName?: string
   tagNames: string[]
   isDuplicate: boolean
+  onCategoryClick: (name: string) => void
+  onTagClick: (name: string) => void
 }): React.JSX.Element {
+  // Badges sit inside a clickable row/card, so each one needs its own stopPropagation - otherwise
+  // the click also bubbles up and selects the row instead of just filtering the list.
   return (
     <div className="flex flex-wrap gap-1">
       {categoryName && (
-        <span className="rounded bg-green-900/60 px-1.5 py-0.5 text-[10px] text-green-300">
+        <button
+          onClick={(event) => {
+            event.stopPropagation()
+            onCategoryClick(categoryName)
+          }}
+          title={`Filter by category: ${categoryName}`}
+          className="rounded bg-green-900/60 px-1.5 py-0.5 text-[10px] text-green-300 hover:bg-green-800/60"
+        >
           {categoryName}
-        </span>
+        </button>
       )}
       {tagNames.map((name, index) => (
-        <span
+        <button
           key={index}
-          className="rounded bg-orange-900/60 px-1.5 py-0.5 text-[10px] text-orange-300"
+          onClick={(event) => {
+            event.stopPropagation()
+            onTagClick(name)
+          }}
+          title={`Filter by tag: ${name}`}
+          className="rounded bg-orange-900/60 px-1.5 py-0.5 text-[10px] text-orange-300 hover:bg-orange-800/60"
         >
           {name}
-        </span>
+        </button>
       ))}
       {isDuplicate && (
         <span className="rounded bg-red-900/60 px-1.5 py-0.5 text-[10px] font-medium uppercase text-red-300">
@@ -130,6 +148,8 @@ interface FileRowViewProps {
   isDuplicate: boolean
   onSelect: (event: React.MouseEvent) => void
   onContextMenu: (event: React.MouseEvent) => void
+  onCategoryClick: (name: string) => void
+  onTagClick: (name: string) => void
   registerVisible: (file: FileRow) => (el: Element | null) => (() => void) | void
 }
 
@@ -143,6 +163,8 @@ function FileRowView({
   isDuplicate,
   onSelect,
   onContextMenu,
+  onCategoryClick,
+  onTagClick,
   registerVisible
 }: FileRowViewProps): React.JSX.Element {
   return (
@@ -171,7 +193,13 @@ function FileRowView({
         </div>
       </td>
       <td className="overflow-hidden px-4 py-2">
-        <LabelBadges categoryName={categoryName} tagNames={tagNames} isDuplicate={isDuplicate} />
+        <LabelBadges
+          categoryName={categoryName}
+          tagNames={tagNames}
+          isDuplicate={isDuplicate}
+          onCategoryClick={onCategoryClick}
+          onTagClick={onTagClick}
+        />
       </td>
       <td className="overflow-hidden px-4 py-2 uppercase text-neutral-500">{file.ext}</td>
       <td className="overflow-hidden px-4 py-2 text-neutral-400">{formatSize(file.size)}</td>
@@ -198,7 +226,11 @@ export function FileTable({ items }: { items: DisplayItem[] }): React.JSX.Elemen
   const moveToTrash = useLibraryStore((state) => state.moveToTrash)
   const deleteGroup = useLibraryStore((state) => state.deleteGroup)
   const createGroup = useLibraryStore((state) => state.createGroup)
+  const addSearchToken = useLibraryStore((state) => state.addSearchToken)
   const registerVisible = useVisibilityPriority()
+
+  const handleCategoryClick = (name: string): void => addSearchToken(`category:${name}`)
+  const handleTagClick = (name: string): void => addSearchToken(`tag:${name}`)
 
   const scrollRef = useRef<HTMLDivElement>(null)
   const theadRef = useRef<HTMLTableSectionElement>(null)
@@ -441,6 +473,8 @@ export function FileTable({ items }: { items: DisplayItem[] }): React.JSX.Elemen
                     event.stopPropagation()
                     openFileMenu(event, row.file)
                   }}
+                  onCategoryClick={handleCategoryClick}
+                  onTagClick={handleTagClick}
                   registerVisible={registerVisible}
                 />
               )
@@ -494,6 +528,8 @@ export function FileTable({ items }: { items: DisplayItem[] }): React.JSX.Elemen
                     categoryName={groupCategoryName}
                     tagNames={groupTagNames}
                     isDuplicate={groupHasDuplicate}
+                    onCategoryClick={handleCategoryClick}
+                    onTagClick={handleTagClick}
                   />
                 </td>
                 <td className="overflow-hidden px-4 py-2 uppercase text-neutral-500">virtual</td>

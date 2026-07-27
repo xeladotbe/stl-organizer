@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseSearchQuery, createTextMatcher } from './searchQuery'
+import { parseSearchQuery, createTextMatcher, insertSearchToken } from './searchQuery'
 
 describe('parseSearchQuery', () => {
   it('treats plain words as text tokens', () => {
@@ -51,6 +51,30 @@ describe('parseSearchQuery', () => {
       categoryTokens: [],
       typeTokens: []
     })
+  })
+})
+
+describe('insertSearchToken', () => {
+  it('appends the token to an empty query', () => {
+    expect(insertSearchToken('', 'tag:Bracket')).toBe('tag:Bracket')
+  })
+
+  it('appends the token after whatever the user already typed', () => {
+    expect(insertSearchToken('spacer', 'tag:Bracket')).toBe('spacer tag:Bracket')
+  })
+
+  it('combines multiple different tokens (AND semantics via parseSearchQuery)', () => {
+    const withTag = insertSearchToken('', 'tag:Bracket')
+    const withBoth = insertSearchToken(withTag, 'category:Vases')
+    expect(withBoth).toBe('tag:Bracket category:Vases')
+  })
+
+  it('is a no-op when the exact token is already present, case-insensitively', () => {
+    expect(insertSearchToken('tag:Bracket', 'tag:bracket')).toBe('tag:Bracket')
+  })
+
+  it('trims surrounding whitespace on the existing query', () => {
+    expect(insertSearchToken('  spacer  ', 'tag:Bracket')).toBe('spacer tag:Bracket')
   })
 })
 

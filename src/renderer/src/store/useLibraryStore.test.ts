@@ -122,6 +122,36 @@ describe('clearFileSelection', () => {
   })
 })
 
+describe('addSearchToken', () => {
+  beforeEach(() => {
+    useLibraryStore.setState({ searchQuery: '', view: 'duplicates' })
+  })
+
+  it('appends a tag/category token to the search field and switches to the "all" view', () => {
+    useLibraryStore.getState().addSearchToken('tag:Bracket')
+
+    const state = useLibraryStore.getState()
+    expect(state.searchQuery).toBe('tag:Bracket')
+    expect(state.view).toBe('all')
+  })
+
+  it('appends to whatever the user already typed rather than replacing it', () => {
+    useLibraryStore.setState({ searchQuery: 'spacer', view: 'all' })
+
+    useLibraryStore.getState().addSearchToken('category:Vases')
+
+    expect(useLibraryStore.getState().searchQuery).toBe('spacer category:Vases')
+  })
+
+  it('does not duplicate a token that is already present', () => {
+    useLibraryStore.setState({ searchQuery: 'tag:Bracket', view: 'all' })
+
+    useLibraryStore.getState().addSearchToken('tag:Bracket')
+
+    expect(useLibraryStore.getState().searchQuery).toBe('tag:Bracket')
+  })
+})
+
 const HDRI_STORAGE_KEY = 'stl-organizer:hdriPath'
 
 describe('pickHdri / clearHdri', () => {

@@ -140,7 +140,7 @@ export function FileList(): React.JSX.Element {
               Grid
             </ToggleGroup.Item>
           </ToggleGroup.Root>
-          {!filesLoading && files.length > 0 && (
+          {files.length > 0 && (
             <div className="ml-auto text-sm text-neutral-500">
               {visibleFiles.length} {visibleFiles.length === 1 ? 'file' : 'files'}
             </div>

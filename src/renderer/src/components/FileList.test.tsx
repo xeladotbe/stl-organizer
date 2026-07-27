@@ -121,7 +121,7 @@ describe('FileList file count', () => {
     expect(screen.getByText('1 file')).toBeInTheDocument();
   });
 
-  it('hides count during loading state when library is empty', () => {
+  it('hides count when library is empty', () => {
     useLibraryStore.setState({
       files: [],
       filesLoading: true,
@@ -133,6 +133,20 @@ describe('FileList file count', () => {
 
     render(<FileList />);
     expect(screen.queryByText(/^[\d]+ files?$/)).not.toBeInTheDocument();
+  });
+
+  it('shows count even during loading state as long as library has files', () => {
+    useLibraryStore.setState({
+      files: [file],
+      filesLoading: true,
+      tags: [],
+      categories: [],
+      groups: [],
+      fileTagIds: new Map()
+    });
+
+    render(<FileList />);
+    expect(screen.getByText('1 file')).toBeInTheDocument();
   });
 
   it('shows count even when library has files, even if no files are visible from search', async () => {

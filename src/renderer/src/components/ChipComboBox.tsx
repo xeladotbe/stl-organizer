@@ -13,7 +13,9 @@ export interface ChipComboBoxItem {
  * text when it doesn't exactly match anything. Backspace on an empty input removes the last chip
  * (standard tag-input convention). Used for both the (single-chip) category picker and the
  * (multi-chip) tag picker in the detail pane - the caller decides what counts as "already
- * assigned" and what "select"/"remove" mean for its data.
+ * assigned" and what "select"/"remove" mean for its data. `onChipClick`, when passed, makes the
+ * chip's name (as opposed to its ✕ remove button) itself clickable - used to filter the file list
+ * down to that tag/category without leaving the detail pane.
  */
 export function ChipComboBox({
   chips,
@@ -22,7 +24,8 @@ export function ChipComboBox({
   chipClassName = 'bg-neutral-800 text-neutral-300',
   onRemove,
   onSelectExisting,
-  onCreateNew
+  onCreateNew,
+  onChipClick
 }: {
   chips: ChipComboBoxItem[]
   suggestions: ChipComboBoxItem[]
@@ -31,6 +34,7 @@ export function ChipComboBox({
   onRemove: (id: number) => void
   onSelectExisting: (id: number) => void
   onCreateNew: (name: string) => void
+  onChipClick?: (id: number) => void
 }): React.JSX.Element {
   const [query, setQuery] = useState('')
   const [open, setOpen] = useState(false)
@@ -60,7 +64,20 @@ export function ChipComboBox({
             key={chip.id}
             className={`flex items-center gap-1 rounded px-1.5 py-0.5 text-xs ${chipClassName}`}
           >
-            {chip.name}
+            {onChipClick ? (
+              <button
+                onClick={(event) => {
+                  event.stopPropagation()
+                  onChipClick(chip.id)
+                }}
+                title={`Filter the file list by "${chip.name}"`}
+                className="hover:underline"
+              >
+                {chip.name}
+              </button>
+            ) : (
+              chip.name
+            )}
             <button
               onClick={(event) => {
                 event.stopPropagation()

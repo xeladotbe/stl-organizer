@@ -22,7 +22,8 @@ export function FileList(): React.JSX.Element {
   const fileTagIds = useLibraryStore((state) => state.fileTagIds)
   const categories = useLibraryStore((state) => state.categories)
   const groups = useLibraryStore((state) => state.groups)
-  const [search, setSearch] = useState('')
+  const search = useLibraryStore((state) => state.searchQuery)
+  const setSearch = useLibraryStore((state) => state.setSearchQuery)
   const [displayMode, setDisplayMode] = useState<DisplayMode>(loadStoredDisplayMode)
 
   useEffect(() => {

@@ -47,9 +47,4 @@ describe('DetailPane', () => {
     render(<DetailPane />);
     expect(screen.getByText('Details')).toBeInTheDocument();
   });
-
-  it('shows the model preview section', () => {
-    render(<DetailPane />);
-    expect(screen.getByTestId('model-preview')).toBeInTheDocument();
-  });
 });

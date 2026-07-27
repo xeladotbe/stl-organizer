@@ -21,4 +21,11 @@ jobs:
 
       - run: npm run lint
 
+      # `npm ci`'s postinstall (`electron-builder install-app-deps`) rebuilds native modules
+      # (better-sqlite3) against Electron's Node ABI, not the plain Node.js this CI runner's
+      # `vitest` workers use - loading that Electron-targeted binary under plain Node crashes the
+      # worker process outright ("Worker exited unexpectedly"), not a normal test failure. Rebuild
+      # it back to the runner's own Node ABI before running tests.
+      - run: npm rebuild better-sqlite3
+
       - run: npm run test

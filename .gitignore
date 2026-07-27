@@ -8,3 +8,6 @@ out
 # Claude Code local-only settings (not shared)
 .claude/settings.local.json
 .claude/scheduled_tasks.lock
+
+# Runtime git worktree checkouts created by worktree-isolated subagents (not repo content)
+.claude/worktrees/

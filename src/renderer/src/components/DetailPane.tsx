@@ -339,7 +339,7 @@ export function DetailPane(): React.JSX.Element | null {
       style={{ width: sidebarWidth }}
     >
       <div className="mb-2 flex items-center justify-between">
-        <span className="text-xs font-semibold uppercase text-neutral-500">Preview</span>
+        <span className="text-xs font-semibold uppercase text-neutral-500">Details</span>
         <button
           onClick={() => selectFile(null)}
           aria-label="Close preview"

@@ -1,9 +1,10 @@
-import { Component, Suspense, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { Canvas } from '@react-three/fiber';
-import { Bounds, Environment, OrbitControls, useBounds } from '@react-three/drei';
+import { Component, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { Canvas, useThree } from '@react-three/fiber';
+import { Bounds, OrbitControls, useBounds } from '@react-three/drei';
 import { modelFileUrl } from '@shared/modelFileUrl';
 import { hdriFileUrl } from '@shared/hdriFileUrl';
 import { useModelParts } from '../hooks/useModelParts';
+import { useHdriTexture } from '../hooks/useHdriTexture';
 import { useLibraryStore } from '../store/useLibraryStore';
 import { DEFAULT_PREVIEW_WIDTH, calculatePreviewHeight } from '../lib/previewDimensions';
 import type { FileRow } from '@shared/types';
@@ -78,24 +79,54 @@ function UnsupportedPlaceholder(): React.JSX.Element {
   );
 }
 
-// Separate from ModelErrorBoundary: a bad/missing HDRI file should fall back to the default
-// lighting rig, not hide the whole model behind "Preview unavailable". Clearing `hdriPath` makes
-// ModelPreview re-render onto the default-lighting branch instead of retrying the same URL.
-class HdriErrorBoundary extends Component<{ children: ReactNode }, ErrorBoundaryState> {
-  state: ErrorBoundaryState = { hasError: false };
+function DefaultLights(): React.JSX.Element {
+  return (
+    <>
+      <ambientLight intensity={0.6} />
+      <directionalLight position={[5, 8, 5]} intensity={0.8} />
+    </>
+  );
+}
 
-  static getDerivedStateFromError(): ErrorBoundaryState {
-    return { hasError: true };
-  }
+// Renders nothing itself — it decodes the HDRI off the main thread (see useHdriTexture.ts) and
+// assigns the result directly to the scene's `environment`, entirely outside of React Suspense.
+//
+// An earlier version of this fix wrapped drei's <Environment> (which loads via `useLoader`/
+// Suspense) and tried to work around the model being gated behind the HDRI's load by deferring
+// *when* that Suspense boundary mounted relative to React's commits. That didn't address the
+// actual cause: decoding a large equirectangular float image (especially EXR's compressed
+// scanlines) is synchronous, CPU-heavy work, and it blocks the renderer's *entire* main thread —
+// including painting whatever the model's own commit already produced — for as long as it runs
+// (measured: >6s for a real 8k EXR, likely more in practice; see PR discussion for numbers).
+// Which React commit a piece of JSX belongs to doesn't change when that synchronous work runs or
+// how long it blocks the thread; only actually moving the decode off-thread does (mirroring
+// useModelParts.ts's fix for the same class of problem with STL/3MF/OBJ files).
+function HdriEnvironment({ hdriUrl, onReady }: { hdriUrl: string; onReady: () => void }): null {
+  const { texture, error } = useHdriTexture(hdriUrl);
+  const scene = useThree((state) => state.scene);
 
-  componentDidCatch(error: unknown): void {
-    console.error('[preview] failed to load HDRI, falling back to default lighting', error);
+  useEffect(() => {
+    if (!error) return;
+    console.error('[preview] failed to load HDRI, falling back to default lighting');
     useLibraryStore.getState().clearHdri();
-  }
+  }, [error]);
 
-  render(): ReactNode {
-    return this.state.hasError ? null : this.props.children;
-  }
+  useEffect(() => {
+    if (!texture) return;
+    // Deliberate exception to react-hooks/immutability: `scene` is the live THREE.Scene instance
+    // from r3f's store, and mutating three.js objects obtained via `useThree`/`useFrame` is
+    // idiomatic, required r3f usage (this is exactly what drei's own <Environment> does
+    // internally to the same `scene.environment` field) — not the kind of React-value mutation
+    // the rule exists to catch.
+    // eslint-disable-next-line react-hooks/immutability
+    scene.environment = texture;
+    onReady();
+    return () => {
+      if (scene.environment === texture) scene.environment = null;
+    };
+  }, [texture, scene, onReady]);
+
+  return null;
 }
 
 function HdriControls(): React.JSX.Element {
@@ -132,6 +163,19 @@ export function ModelPreview({
   const [erroredFileId, setErroredFileId] = useState<number | null>(null);
   const hasModelError = erroredFileId === file.id;
 
+  // Whether the current `hdriUrl` has actually finished loading (see HdriEnvironment above).
+  // `hdriReady` is reset "adjusted during render" whenever `hdriUrl` itself changes, rather than
+  // via an effect (see rerender-derived-state-no-effect) — this is the React-documented pattern
+  // for resetting state when a prop changes, and correctly covers every transition (on -> off,
+  // off -> on, on -> a different file), not just "different URL".
+  const [hdriReady, setHdriReady] = useState(false);
+  const [prevHdriUrl, setPrevHdriUrl] = useState(hdriUrl);
+  if (hdriUrl !== prevHdriUrl) {
+    setPrevHdriUrl(hdriUrl);
+    setHdriReady(false);
+  }
+  const handleHdriReady = useCallback(() => setHdriReady(true), []);
+
   const previewHeight = calculatePreviewHeight(width);
 
   return (
@@ -147,16 +191,12 @@ export function ModelPreview({
           actually needs a per-file reset (ParsedModel, keyed by `url` below) fixes that. */}
       <Canvas camera={{ position: [40, 40, 40], fov: 45 }}>
         {hdriUrl ? (
-          <HdriErrorBoundary key={hdriUrl}>
-            <Suspense fallback={null}>
-              <Environment files={hdriUrl} />
-            </Suspense>
-          </HdriErrorBoundary>
-        ) : (
           <>
-            <ambientLight intensity={0.6} />
-            <directionalLight position={[5, 8, 5]} intensity={0.8} />
+            {!hdriReady && <DefaultLights />}
+            <HdriEnvironment key={hdriUrl} hdriUrl={hdriUrl} onReady={handleHdriReady} />
           </>
+        ) : (
+          <DefaultLights />
         )}
         <Bounds fit clip observe margin={1.3}>
           {/* `fallback={null}`: a DOM node can't be a child of <Canvas>. The actual "Preview

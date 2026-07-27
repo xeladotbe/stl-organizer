@@ -5,6 +5,7 @@ import { ConfirmDialog } from './ConfirmDialog'
 import { ChipComboBox } from './ChipComboBox'
 import { SelectField } from './SelectField'
 import { formatSize } from '../lib/format'
+import { findDuplicateSiblings } from '../lib/duplicates'
 import type { CategoryRow, FileRow, TagRow } from '@shared/types'
 
 /**
@@ -273,6 +274,7 @@ export function DetailPane(): React.JSX.Element | null {
   const assignedTagIds = fileTagIds.get(file.id) ?? []
   const memberGroup = file.group_id != null ? groups.find((g) => g.id === file.group_id) : undefined
   const baseName = file.filename.slice(0, file.filename.length - file.ext.length - 1)
+  const duplicateSiblings = findDuplicateSiblings(files, file)
 
   const toggleTag = (tagId: number): void => {
     const next = assignedTagIds.includes(tagId)
@@ -308,6 +310,27 @@ export function DetailPane(): React.JSX.Element | null {
           {file.path}
         </div>
       </div>
+
+      {duplicateSiblings.length > 0 && (
+        <div className="mt-4">
+          <label className="mb-1 block text-xs font-semibold uppercase text-neutral-500">
+            Duplicates ({duplicateSiblings.length})
+          </label>
+          <ul className="space-y-1">
+            {duplicateSiblings.map((sibling) => (
+              <li key={sibling.id}>
+                <button
+                  onClick={() => selectFile(sibling.id)}
+                  className="block w-full truncate text-left text-sm text-neutral-300 hover:text-neutral-100"
+                  title={sibling.path}
+                >
+                  {sibling.filename}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <div className="mt-4">
         <label className="mb-1 block text-xs font-semibold uppercase text-neutral-500">

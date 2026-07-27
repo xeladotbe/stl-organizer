@@ -4,6 +4,7 @@ import type { WatchedFolderRow, ScanProgressEvent, FileChangedEvent } from '../.
 import { scanFile, removeFile } from '../scanning/scanner'
 import { appEvents } from '../appEvents'
 import { scheduleHashSweep } from '../hashing/hashQueue'
+import { maybeAutoGroupFile } from '../scanning/autoGroup'
 
 const MODEL_EXTENSIONS = new Set(['.stl', '.3mf', '.obj'])
 const IGNORED_DIR_PATTERN =
@@ -31,6 +32,7 @@ export function startWatching(folder: WatchedFolderRow): void {
   const onUpsert = (path: string): void => {
     const file = scanFile(folder.id, path)
     if (!file) return
+    maybeAutoGroupFile(file)
     appEvents.emit('file-changed', {
       type: ready ? 'updated' : 'added',
       file

@@ -16,7 +16,9 @@ export function getDb(): Database.Database {
   return db
 }
 
-function runMigrations(db: Database.Database): void {
+/** Exported so tests can apply the real schema (and any data migrations) to an in-memory
+ *  better-sqlite3 instance without going through getDb()'s Electron app.getPath() dependency. */
+export function runMigrations(db: Database.Database): void {
   db.exec(
     `CREATE TABLE IF NOT EXISTS schema_migrations (
       id INTEGER PRIMARY KEY,
@@ -35,7 +37,8 @@ function runMigrations(db: Database.Database): void {
   for (const migration of migrations) {
     if (appliedIds.has(migration.id)) continue
     const applyMigration = db.transaction(() => {
-      db.exec(migration.sql)
+      if (migration.sql) db.exec(migration.sql)
+      if (migration.migrate) migration.migrate(db)
       recordApplied.run(migration.id, migration.name, Date.now())
     })
     applyMigration()

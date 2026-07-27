@@ -11,9 +11,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Several native/dev deps (better-sqlite3@13, @electron/rebuild, node-abi, camera-controls)
+      # now declare "engines": { "node": ">=22" } - `npm ci` warns (EBADENGINE) but still installs
+      # under an older Node. Node 20 isn't just "unsupported" in the advisory sense here: a
+      # better-sqlite3 native binary actually compiled/rebuilt against Node 20 headers loads
+      # without error but segfaults the process the moment a real query runs against it (repro'd
+      # standalone via `node -e "require('better-sqlite3') ..."`, no vitest involved - see the
+      # diagnostic step below). Pin to 22 so the runner matches what these deps actually require
+      # (also matches the Node version Electron 39 itself embeds).
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
 
       - run: npm ci
 
@@ -27,5 +35,18 @@ jobs:
       # worker process outright ("Worker exited unexpectedly"), not a normal test failure. Rebuild
       # it back to the runner's own Node ABI before running tests.
       - run: npm rebuild better-sqlite3
+
+      # Diagnostic: confirm the just-rebuilt native binary actually loads (and can open/query a
+      # real DB) under plain node, outside of vitest's worker-fork machinery entirely. If this
+      # step itself fails/crashes, the problem is the rebuilt binary (e.g. a Node/ABI mismatch),
+      # not anything vitest-specific - which is exactly what tracked down the Node-20 issue above.
+      - run: |
+          node -e "
+            const Database = require('better-sqlite3');
+            const db = new Database(':memory:');
+            db.exec('CREATE TABLE t (id INTEGER)');
+            db.prepare('INSERT INTO t (id) VALUES (?)').run(1);
+            console.log('better-sqlite3 OK:', db.prepare('SELECT id FROM t').get());
+          "
 
       - run: npm run test

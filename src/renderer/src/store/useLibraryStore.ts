@@ -124,6 +124,10 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
         refetchTimer = null
         void get().loadFiles()
         void get().loadDuplicates()
+        // Scanning can silently create/grow model groups (auto-grouping files created together
+        // within a few seconds of each other - see maybeAutoGroupFile), not just files, so the
+        // groups list needs to stay in sync with the same refetch that follows a scan.
+        void get().loadGroups()
       }, 300)
     }
 

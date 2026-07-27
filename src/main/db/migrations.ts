@@ -1,7 +1,18 @@
+import type Database from 'better-sqlite3'
+import { backfillAutoGroups } from '../scanning/backfillAutoGroups'
+
 export interface Migration {
   id: number
   name: string
-  sql: string
+  /** Raw schema DDL, run first if present. */
+  sql?: string
+  /**
+   * One-off data transform, run after `sql` (if both are present) inside the same transaction as
+   * the rest of migration application. Used for migrations that need JS logic rather than pure
+   * DDL/DML - e.g. id 3's auto-group backfill (see backfillAutoGroups.ts), which needs to compare
+   * file timestamps and replay grouping decisions, not just alter the schema.
+   */
+  migrate?: (db: Database.Database) => void
 }
 
 export const migrations: Migration[] = [
@@ -70,5 +81,17 @@ export const migrations: Migration[] = [
       ALTER TABLE files ADD COLUMN group_id INTEGER REFERENCES model_groups(id) ON DELETE SET NULL;
       CREATE INDEX idx_files_group ON files(group_id);
     `
+  },
+  {
+    id: 3,
+    name: 'backfill_auto_groups',
+    // Retroactively applies issue #32's "group files created within ~10s of each other" rule to
+    // whatever's already in the library, since libraries scanned before this feature existed
+    // never went through it. Runs exactly once per DB, same as any other migration; new files
+    // scanned after this point get the equivalent live treatment via maybeAutoGroupFile
+    // (autoGroup.ts), hooked into watcherManager.ts.
+    migrate: (db) => {
+      backfillAutoGroups(db)
+    }
   }
 ]

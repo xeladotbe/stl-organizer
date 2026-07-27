@@ -5,24 +5,8 @@ import { ConfirmDialog } from './ConfirmDialog';
 import { ChipComboBox } from './ChipComboBox';
 import { SelectField } from './SelectField';
 import { formatSize } from '../lib/format';
+import { SIDEBAR_WIDTH_STORAGE_KEY, MIN_SIDEBAR_WIDTH, loadStoredSidebarWidth } from '../lib/sidebarStorage';
 import type { CategoryRow, FileRow, TagRow } from '@shared/types';
-
-const SIDEBAR_WIDTH_STORAGE_KEY = 'stl-organizer:sidebarWidth';
-const DEFAULT_SIDEBAR_WIDTH = 320; // w-80
-const MIN_SIDEBAR_WIDTH = 200;
-
-function loadStoredSidebarWidth(): number {
-  try {
-    const raw = localStorage.getItem(SIDEBAR_WIDTH_STORAGE_KEY);
-    if (raw) {
-      const parsed = Number(raw);
-      if (!isNaN(parsed) && parsed >= MIN_SIDEBAR_WIDTH) return parsed;
-    }
-  } catch {
-    // ignore malformed storage, fall back to default
-  }
-  return DEFAULT_SIDEBAR_WIDTH;
-}
 
 /**
  * `key`-ed by the caller on the underlying id + value, so an external rename (or switching to a

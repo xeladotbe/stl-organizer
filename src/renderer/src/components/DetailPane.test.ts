@@ -1,22 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-
-// Constants from DetailPane
-const SIDEBAR_WIDTH_STORAGE_KEY = 'stl-organizer:sidebarWidth';
-const DEFAULT_SIDEBAR_WIDTH = 320; // w-80
-const MIN_SIDEBAR_WIDTH = 200;
-
-function loadStoredSidebarWidth(): number {
-  try {
-    const raw = localStorage.getItem(SIDEBAR_WIDTH_STORAGE_KEY);
-    if (raw) {
-      const parsed = Number(raw);
-      if (!isNaN(parsed) && parsed >= MIN_SIDEBAR_WIDTH) return parsed;
-    }
-  } catch {
-    // ignore malformed storage, fall back to default
-  }
-  return DEFAULT_SIDEBAR_WIDTH;
-}
+import {
+  SIDEBAR_WIDTH_STORAGE_KEY,
+  DEFAULT_SIDEBAR_WIDTH,
+  MIN_SIDEBAR_WIDTH,
+  loadStoredSidebarWidth
+} from '../lib/sidebarStorage';
 
 describe('DetailPane sidebar width utilities', () => {
   beforeEach(() => {

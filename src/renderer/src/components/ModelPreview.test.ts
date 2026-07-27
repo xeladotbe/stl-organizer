@@ -1,13 +1,9 @@
 import { describe, it, expect } from 'vitest';
-
-const DEFAULT_PREVIEW_WIDTH = 288; // w-80 minus padding = 320 - 32
-const PREVIEW_ASPECT_RATIO = DEFAULT_PREVIEW_WIDTH / 256; // width / default height
-
-// Replicate the height calculation logic from ModelPreview
-function calculatePreviewHeight(width: number): number {
-  const previewAreaWidth = Math.max(width - 24, 100); // Subtract padding
-  return Math.round(previewAreaWidth / PREVIEW_ASPECT_RATIO);
-}
+import {
+  DEFAULT_PREVIEW_WIDTH,
+  PREVIEW_ASPECT_RATIO,
+  calculatePreviewHeight
+} from '../lib/previewDimensions';
 
 describe('ModelPreview width scaling', () => {
   describe('calculatePreviewHeight', () => {

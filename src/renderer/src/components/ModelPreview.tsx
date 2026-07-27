@@ -5,6 +5,7 @@ import { modelFileUrl } from '@shared/modelFileUrl';
 import { hdriFileUrl } from '@shared/hdriFileUrl';
 import { useModelParts } from '../hooks/useModelParts';
 import { useLibraryStore } from '../store/useLibraryStore';
+import { DEFAULT_PREVIEW_WIDTH, calculatePreviewHeight } from '../lib/previewDimensions';
 import type { FileRow } from '@shared/types';
 
 function ParsedModel({ url, ext }: { url: string; ext: FileRow['ext'] }): React.JSX.Element | null {
@@ -109,9 +110,6 @@ function HdriControls(): React.JSX.Element {
   );
 }
 
-const DEFAULT_PREVIEW_WIDTH = 288; // w-80 minus padding = 320 - 32
-const PREVIEW_ASPECT_RATIO = DEFAULT_PREVIEW_WIDTH / 256; // width / default height
-
 export function ModelPreview({
   file,
   width = DEFAULT_PREVIEW_WIDTH
@@ -123,10 +121,7 @@ export function ModelPreview({
   const hdriPath = useLibraryStore((state) => state.hdriPath);
   const hdriUrl = useMemo(() => (hdriPath ? hdriFileUrl(hdriPath) : null), [hdriPath]);
 
-  // Scale height proportionally based on sidebar width
-  // Account for padding (p-3 = 0.75rem = 12px on each side) and borders/margins
-  const previewAreaWidth = Math.max(width - 24, 100); // Subtract padding
-  const previewHeight = Math.round(previewAreaWidth / PREVIEW_ASPECT_RATIO);
+  const previewHeight = calculatePreviewHeight(width);
 
   return (
     <div

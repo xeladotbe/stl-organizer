@@ -195,9 +195,9 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
 
   removeFolder: async (id) => {
     await window.api.folders.remove(id)
-    await get().loadFolders()
-    await get().loadFiles()
-    await get().loadDuplicates()
+    // The three refetches are independent reads of already-committed state (the removal above
+    // already finished) - awaiting them one at a time serializes 3 IPC round trips for no reason.
+    await Promise.all([get().loadFolders(), get().loadFiles(), get().loadDuplicates()])
   },
 
   // A plain "select this one file" click always collapses any active multi-selection down to
@@ -267,8 +267,8 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
 
   moveToTrash: async (id) => {
     await window.api.files.moveToTrash(id)
-    await get().loadFiles()
-    await get().loadDuplicates()
+    // Independent refetches - run them concurrently instead of one after the other.
+    await Promise.all([get().loadFiles(), get().loadDuplicates()])
   },
 
   renameFile: async (id, newBaseName) => {
@@ -292,8 +292,8 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
 
   deleteTag: async (id) => {
     await window.api.tags.delete(id)
-    await get().loadTags()
-    await get().loadFileTagLinks()
+    // Independent refetches - run them concurrently instead of one after the other.
+    await Promise.all([get().loadTags(), get().loadFileTagLinks()])
   },
 
   createCategory: async (name) => {
@@ -311,8 +311,8 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
 
   deleteCategory: async (id) => {
     await window.api.categories.delete(id)
-    await get().loadCategories()
-    await get().loadFiles()
+    // Independent refetches - run them concurrently instead of one after the other.
+    await Promise.all([get().loadCategories(), get().loadFiles()])
   },
 
   setFileTags: async (fileId, tagIds) => {
@@ -330,8 +330,8 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
     const group = await window.api.groups.create(name.trim(), fileIds)
     get().clearFileSelection()
     set({ selection: { type: 'group', id: group.id } })
-    await get().loadGroups()
-    await get().loadFiles()
+    // Independent refetches - run them concurrently instead of one after the other.
+    await Promise.all([get().loadGroups(), get().loadFiles()])
   },
 
   renameGroup: async (id, name) => {
@@ -348,15 +348,15 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   addFilesToGroup: async (id, fileIds) => {
     await window.api.groups.addFiles(id, fileIds)
     get().clearFileSelection()
-    await get().loadGroups()
-    await get().loadFiles()
+    // Independent refetches - run them concurrently instead of one after the other.
+    await Promise.all([get().loadGroups(), get().loadFiles()])
   },
 
   removeFileFromGroup: async (fileId) => {
     await window.api.groups.removeFile(fileId)
     set({ selection: { type: 'file', id: fileId } })
-    await get().loadGroups()
-    await get().loadFiles()
+    // Independent refetches - run them concurrently instead of one after the other.
+    await Promise.all([get().loadGroups(), get().loadFiles()])
   },
 
   deleteGroup: async (id) => {
@@ -364,7 +364,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
     set((state) =>
       state.selection?.type === 'group' && state.selection.id === id ? { selection: null } : {}
     )
-    await get().loadGroups()
-    await get().loadFiles()
+    // Independent refetches - run them concurrently instead of one after the other.
+    await Promise.all([get().loadGroups(), get().loadFiles()])
   }
 }))

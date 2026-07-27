@@ -109,13 +109,30 @@ function HdriControls(): React.JSX.Element {
   );
 }
 
-export function ModelPreview({ file }: { file: FileRow }): React.JSX.Element {
+const DEFAULT_PREVIEW_WIDTH = 288; // w-80 minus padding = 320 - 32
+const PREVIEW_ASPECT_RATIO = DEFAULT_PREVIEW_WIDTH / 256; // width / default height
+
+export function ModelPreview({
+  file,
+  width = DEFAULT_PREVIEW_WIDTH
+}: {
+  file: FileRow;
+  width?: number;
+}): React.JSX.Element {
   const url = useMemo(() => modelFileUrl(file.id, file.filename), [file.id, file.filename]);
   const hdriPath = useLibraryStore((state) => state.hdriPath);
   const hdriUrl = useMemo(() => (hdriPath ? hdriFileUrl(hdriPath) : null), [hdriPath]);
 
+  // Scale height proportionally based on sidebar width
+  // Account for padding (p-3 = 0.75rem = 12px on each side) and borders/margins
+  const previewAreaWidth = Math.max(width - 24, 100); // Subtract padding
+  const previewHeight = Math.round(previewAreaWidth / PREVIEW_ASPECT_RATIO);
+
   return (
-    <div className="relative h-64 w-full overflow-hidden rounded border border-neutral-800 bg-neutral-950">
+    <div
+      className="relative overflow-hidden rounded border border-neutral-800 bg-neutral-950"
+      style={{ width: '100%', height: previewHeight }}
+    >
       <ModelErrorBoundary key={file.id} fallback={<UnsupportedPlaceholder />}>
         <Canvas camera={{ position: [40, 40, 40], fov: 45 }}>
           {hdriUrl ? (

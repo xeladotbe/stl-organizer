@@ -71,6 +71,31 @@ describe('ChipComboBox', () => {
     expect(onRemove).toHaveBeenCalledWith(3);
   });
 
+  it('calls onChipClick (not onRemove) when a chip is clicked and onChipClick is provided', async () => {
+    const user = userEvent.setup()
+    const onChipClick = vi.fn()
+    const { onRemove } = setup({ chips: [{ id: 3, name: 'Vase' }], onChipClick })
+    await user.click(screen.getByText('Vase'))
+    expect(onChipClick).toHaveBeenCalledWith(3)
+    expect(onRemove).not.toHaveBeenCalled()
+  })
+
+  it('renders a plain (non-clickable) chip name when onChipClick is not provided', () => {
+    setup({ chips: [{ id: 3, name: 'Vase' }] })
+    expect(screen.queryByRole('button', { name: 'Vase' })).not.toBeInTheDocument()
+    expect(screen.getByText('Vase')).toBeInTheDocument()
+  })
+
+  it('still removes via the ✕ button when onChipClick is also provided', async () => {
+    const user = userEvent.setup()
+    const { onRemove } = setup({
+      chips: [{ id: 3, name: 'Vase' }],
+      onChipClick: vi.fn()
+    })
+    await user.click(screen.getByRole('button', { name: 'Remove Vase' }))
+    expect(onRemove).toHaveBeenCalledWith(3)
+  })
+
   it('removes the last chip on Backspace when the input is empty', async () => {
     const user = userEvent.setup();
     const { onRemove } = setup({
